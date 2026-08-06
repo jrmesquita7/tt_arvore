@@ -394,6 +394,20 @@ let boardHasRendered = false;
 
 function fmtBRL(v){ return "R$ " + (v||0).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2}); }
 
+// Percentual do nó em relação ao total do pai. Com apenas 1 casa decimal,
+// um nó com valor pequeno mas real (ex.: 0,03%) e outro que fica bem perto
+// de 100% arredondavam pra "0.0%" e "100.0%" respectivamente, dando a
+// impressão de que um deles não tinha valor nenhum. Usa mais casas quando
+// o valor é pequeno e evita cravar 0%/100% quando não é exatamente isso.
+function formatarPercentual(valor, total){
+  if (!(total > 0) || !(valor > 0)) return '0%';
+  const bruto = (valor / total) * 100;
+  if (bruto < 0.1) return '<0.1%';
+  if (bruto > 99.9 && bruto < 100) return '>99.9%';
+  const casas = bruto < 1 ? 2 : 1;
+  return bruto.toFixed(casas) + '%';
+}
+
 function setStatus(msg, kind){
   const statusEl = document.getElementById('status');
   statusEl.className = kind || '';
@@ -596,7 +610,7 @@ function render(){
       const nodeId = `c${level}_${idx}`;
       const isActive = path[level] && path[level].value === node.label;
       const totalPai = totalPaiObj[MEASURES[0].key];
-      const pct = totalPai > 0 ? ((node.agg[MEASURES[0].key] / totalPai) * 100).toFixed(1) : '0.0';
+      const pct = formatarPercentual(node.agg[MEASURES[0].key], totalPai);
 
       const el = document.createElement('div');
       el.className = 'node' + (isActive ? ' active' : '');
@@ -604,10 +618,10 @@ function render(){
       el.tabIndex = 0;
       el.setAttribute('role', 'button');
       el.setAttribute('aria-pressed', isActive ? 'true' : 'false');
-      el.setAttribute('aria-label', `${dim}: ${node.label}, ${pct}% do total`);
+      el.setAttribute('aria-label', `${dim}: ${node.label}, ${pct} do total`);
       const pctDoMax = maxVal > 0 ? Math.max(2, Math.min(100, (node.agg[MEASURES[0].key] / maxVal) * 100)) : 0;
       el.innerHTML = `
-        <div class="lbl"><span>${node.label}</span><span class="pct">${pct}%</span></div>
+        <div class="lbl"><span>${node.label}</span><span class="pct">${pct}</span></div>
         <div class="headline-bar"><div class="headline-fill" style="width:${pctDoMax}%"></div></div>
         ${MEASURES.map(m => metricRowNode(m, node.agg[m.key], maxVal)).join('')}
       `;
