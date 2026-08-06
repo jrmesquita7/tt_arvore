@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Árvore de Decomposição — Débito Associado</title>
+<style>
+  /* ==========================================================================
+     PALETA -- extraída da peça de campanha oficial "Atitude para Transformar"
+     (azul-marinho profundo + laranja vibrante + azul claro de apoio).
+     ========================================================================== */
+  :root{
+    --eq-navy:#0E1B4A;      /* azul-marinho profundo (fundo da peça oficial) */
+    --eq-navy-2:#16255E;
+    --eq-blue:#3AA0E8;      /* azul claro (usado no subtítulo da peça) */
+    --eq-orange:#FF5A1F;    /* laranja vibrante ("ATITUDE") */
+    --eq-yellow:#FFC93C;    /* amarelo do gradiente decorativo */
+    --ink:#0E1B4A;
+    --ink-soft:#5B6B7C;
+    --canvas:#F4F6F8;
+    --panel:#ffffff;
+    --line:#DCE2E8;
+    --m1:var(--eq-orange);
+    --m2:var(--eq-blue);
+    --m3:var(--eq-yellow);
+    --warn:#C0392B;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--canvas);color:var(--ink);font-family:'Segoe UI',-apple-system,'Helvetica Neue',Arial,sans-serif;}
+  .wrap{max-width:1700px;margin:0 auto;padding:20px 22px 60px;}
+
+  header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;border-bottom:3px solid var(--eq-navy);padding-bottom:12px;margin-bottom:10px;flex-wrap:wrap;}
+  header h1{font-size:1.05rem;font-weight:700;text-transform:uppercase;margin:0;color:var(--eq-navy);letter-spacing:.02em;}
+  .meta-line{display:flex;align-items:center;gap:10px;margin-top:4px;flex-wrap:wrap;}
+  .meta{font-size:.74rem;color:var(--ink-soft);}
+  .badge-ano{background:var(--eq-navy);color:#fff;font-size:.68rem;font-weight:700;padding:3px 10px;border-radius:3px;letter-spacing:.03em;}
+
+  .controls{display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+  .filtro-empresa{display:flex;align-items:center;gap:6px;font-size:.76rem;color:var(--ink-soft);}
+  .filtro-empresa select{
+    border:1px solid var(--line); border-radius:4px; padding:5px 8px; font-size:.78rem;
+    background:#fff; color:var(--ink); cursor:pointer;
+  }
+  .legend{display:flex;gap:14px;font-size:.74rem;color:var(--ink-soft);}
+  .legend span{display:flex;align-items:center;gap:5px;}
+  .swatch{width:9px;height:9px;border-radius:2px;display:inline-block;}
+  button.reload{background:var(--eq-navy);color:#fff;border:none;padding:7px 16px;font-size:.75rem;cursor:pointer;border-radius:4px;font-weight:600;}
+  button.reload:hover{background:var(--eq-blue);}
+
+  #status{font-size:.78rem;color:var(--ink-soft);margin:8px 0;}
+  #status.error{color:var(--warn);font-weight:600;}
+
+  .stage{position:relative;overflow-x:auto;padding-bottom:24px;scroll-behavior:smooth;}
+  svg.connectors{position:absolute;top:0;left:0;pointer-events:none;overflow:visible;z-index:5;}
+  .board{display:flex;gap:28px;align-items:flex-start;position:relative;z-index:1;}
+  .root-col,.col{min-width:235px;flex:0 0 235px;position:relative;}
+  .col-head{display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid var(--eq-navy);padding-bottom:6px;margin-bottom:14px;}
+  .col-head .name{font-weight:700;font-size:.78rem;color:var(--eq-navy);letter-spacing:.02em;}
+  .root-block{padding-top:44px;}
+
+  .root-card{background:var(--eq-navy);color:#fff;border-left:4px solid var(--eq-orange);padding:14px 16px;border-radius:2px;}
+  .root-card .label{font-size:.7rem;color:#9fb7cc;text-transform:uppercase;margin-bottom:10px;letter-spacing:.03em;}
+
+  .metric-row{display:flex;align-items:center;gap:7px;margin:5px 0;}
+  .metric-row .dot{width:7px;height:7px;border-radius:2px;flex:0 0 7px;}
+  .metric-row .bar-track{flex:1;height:6px;background:#eef1f4;border-radius:2px;overflow:hidden;}
+  .root-card .bar-track{background:rgba(255,255,255,.15);}
+  .metric-row .bar-fill{height:100%;border-radius:2px;}
+  .metric-row .lblval{font-variant-numeric:tabular-nums;font-size:.68rem;white-space:nowrap;flex:0 0 auto;}
+  .metric-row .lblval .name{opacity:.75;margin-right:3px;}
+
+  .node{background:var(--panel);border:1px solid var(--line);padding:9px 12px 11px;margin-bottom:8px;cursor:pointer;transition:.12s;border-radius:2px;}
+  .node:hover{border-color:var(--eq-orange);box-shadow:0 1px 4px rgba(14,27,74,.12);}
+  .node.active{border-color:var(--eq-orange);border-width:1.5px;background:#FFF1E9;}
+  .node .lbl{font-weight:600;font-size:.82rem;margin-bottom:5px;display:flex;justify-content:space-between;color:var(--ink);}
+  .node .lbl .pct{font-weight:400;color:var(--ink-soft);font-size:.68rem;}
+  .headline-bar{height:5px;background:#eef1f4;border-radius:2px;overflow:hidden;margin-bottom:9px;}
+  .headline-fill{height:100%;background:var(--eq-orange);border-radius:2px;}
+  .node .metric-row{flex-direction:column;align-items:stretch;gap:2px;margin:6px 0;}
+  .node .metric-row .top-line{display:flex;align-items:center;justify-content:space-between;}
+  .node .metric-row .lblval{font-size:.66rem;}
+  .node .metric-row .bar-track{height:5px;}
+
+  footer{margin-top:24px;border-top:1px solid var(--line);padding-top:12px;font-size:.72rem;color:var(--ink-soft);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Débito Associado — Troca de Titularidade</h1>
+      <div class="meta-line">
+        <span class="meta" id="metaInfo">carregando...</span>
+        <span class="badge-ano">Ano de referência: 2026</span>
+      </div>
+    </div>
+    <div class="controls">
+      <div class="filtro-empresa">
+        <label for="selEmpresa">Empresa:</label>
+        <select id="selEmpresa"><option value="__todas__">Todas</option></select>
+      </div>
+      <div class="legend">
+        <span><i class="swatch" style="background:var(--m1)"></i>Débito Associado</span>
+        <span><i class="swatch" style="background:var(--m2)"></i>Parcelas</span>
+        <span><i class="swatch" style="background:var(--m3)"></i>CNR</span>
+      </div>
+      <button class="reload" id="btnReload">Recarregar dados</button>
+    </div>
+  </header>
+  <div id="status">Conectando à API...</div>
+  <div class="stage" id="stage">
+    <svg class="connectors" id="svgConnectors"></svg>
+    <div class="board" id="board"></div>
+  </div>
+  <footer>Dados ao vivo via PHP + Snowflake. Clique num nó pra expandir a próxima coluna. Base filtrada para o ano de 2026.</footer>
+</div>
+
+<script>
+const API_URL = 'api/dados_arvore.php';
+const DIMENSIONS = ['CLASSE','SEGMENTO','STATUS_COMERCIAL','ORIGEM_TROCA','GRUPO_TARIFARIO','VERIFICACAO','FATURA_FINAL'];
+const MEASURES = [
+  {key:'TOTAL_AB_CC_ANT',  label:'Débito',   color:'var(--m1)'},
+  {key:'TOTAL_AB_PARCELAS',label:'Parcelas', color:'var(--m2)'},
+  {key:'VALOR_CNR',        label:'CNR',      color:'var(--m3)'},
+];
+
+let FULL_DATA = [];
+let DATA = [];
+let path = [];
+let empresaSelecionada = '__todas__';
+
+function fmtBRL(v){ return "R$ " + (v||0).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+
+async function carregarDados(forcarAtualizacao){
+  const statusEl = document.getElementById('status');
+  const metaEl = document.getElementById('metaInfo');
+  statusEl.textContent = forcarAtualizacao ? 'Consultando o Snowflake (pode levar alguns segundos)...' : 'Carregando dados em cache...';
+  statusEl.className = '';
+  try{
+    const url = forcarAtualizacao ? `${API_URL}?atualizar=1` : API_URL;
+    const resp = await fetch(url, {cache:'no-store'});
+    const json = await resp.json();
+    if (!resp.ok || json.error){
+      throw new Error(json.detalhe || json.error || ('HTTP ' + resp.status));
+    }
+    FULL_DATA = json.dados || [];
+    metaEl.textContent = `${json.linhas} combinações · atualizado em ${json.geradoEm ? new Date(json.geradoEm).toLocaleString('pt-BR') : '--'}`;
+    statusEl.textContent = '';
+
+    montarFiltroEmpresa();
+    aplicarFiltroEmpresa();
+    path = [];
+    render();
+  } catch(err){
+    statusEl.textContent = 'Erro ao carregar dados: ' + err.message;
+    statusEl.className = 'error';
+    console.error(err);
+  }
+}
+
+function montarFiltroEmpresa(){
+  const sel = document.getElementById('selEmpresa');
+  const empresas = [...new Set(FULL_DATA.map(r => r.EMPRESA).filter(Boolean))].sort();
+  const valorAtual = sel.value || '__todas__';
+  sel.innerHTML = '<option value="__todas__">Todas</option>' +
+    empresas.map(e => `<option value="${e}">${e}</option>`).join('');
+  sel.value = empresas.includes(valorAtual) ? valorAtual : '__todas__';
+  empresaSelecionada = sel.value;
+}
+
+function aplicarFiltroEmpresa(){
+  DATA = empresaSelecionada === '__todas__'
+    ? FULL_DATA
+    : FULL_DATA.filter(r => r.EMPRESA === empresaSelecionada);
+}
+
+function filterByPath(data, path){
+  return data.filter(row => path.every(p => row[p.dim] === p.value));
+}
+function aggregate(rows){
+  const out = {};
+  MEASURES.forEach(m => out[m.key] = 0);
+  rows.forEach(r => MEASURES.forEach(m => out[m.key] += (r[m.key] || 0)));
+  return out;
+}
+function aggregateBy(rows, dim){
+  const groups = {};
+  rows.forEach(r => {
+    const key = r[dim] ?? '(vazio)';
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(r);
+  });
+  return Object.keys(groups).map(key => ({
+    label: key, rows: groups[key], agg: aggregate(groups[key]),
+  })).sort((a,b) => b.agg[MEASURES[0].key] - a.agg[MEASURES[0].key]);
+}
+
+function metricRowRoot(measure, value, maxVal){
+  const pct = maxVal > 0 ? Math.max(2, Math.min(100, (value / maxVal) * 100)) : 0;
+  return `<div class="metric-row">
+    <span class="dot" style="background:${measure.color}"></span>
+    <span class="bar-track"><span class="bar-fill" style="width:${pct}%;background:${measure.color}"></span></span>
+    <span class="lblval"><span class="name">${measure.label}:</span>${fmtBRL(value)}</span>
+  </div>`;
+}
+function metricRowNode(measure, value, maxVal){
+  const pct = maxVal > 0 ? Math.max(2, Math.min(100, (value / maxVal) * 100)) : 0;
+  return `<div class="metric-row">
+    <div class="top-line">
+      <span class="lblval"><span class="dot" style="background:${measure.color};display:inline-block;width:6px;height:6px;border-radius:1px;margin-right:4px;"></span><span class="name">${measure.label}:</span>${fmtBRL(value)}</span>
+    </div>
+    <span class="bar-track"><span class="bar-fill" style="width:${pct}%;background:${measure.color}"></span></span>
+  </div>`;
+}
+
+function render(){
+  const board = document.getElementById('board');
+  board.innerHTML = '';
+  const totalGeral = aggregate(DATA);
+
+  const rootCol = document.createElement('div');
+  rootCol.className = 'root-col root-block';
+  rootCol.innerHTML = `<div class="root-card" data-nodeid="root">
+      <div class="label">Débito Associado</div>
+      ${MEASURES.map(m => metricRowRoot(m, totalGeral[m.key], totalGeral[MEASURES[0].key])).join('')}
+    </div>`;
+  board.appendChild(rootCol);
+
+  let subset = DATA;
+  let lastSelectedId = 'root';
+  const connectors = [];
+
+  for (let level = 0; level < DIMENSIONS.length; level++){
+    if (!subset || subset.length === 0) break;
+    const dim = DIMENSIONS[level];
+    const nodes = aggregateBy(subset, dim);
+    const maxVal = Math.max(...nodes.map(n => n.agg[MEASURES[0].key]), 1);
+
+    const col = document.createElement('div');
+    col.className = 'col';
+    col.dataset.colIndex = level;
+    col.innerHTML = `<div class="col-head"><span class="name">${dim}</span></div><div class="nodes"></div>`;
+    const nodesWrap = col.querySelector('.nodes');
+
+    const totalPaiObj = level === 0 ? totalGeral : aggregate(filterByPath(DATA, path.slice(0,level)));
+
+    nodes.forEach((node, idx) => {
+      const nodeId = `c${level}_${idx}`;
+      const isActive = path[level] && path[level].value === node.label;
+      const totalPai = totalPaiObj[MEASURES[0].key];
+      const pct = totalPai > 0 ? ((node.agg[MEASURES[0].key] / totalPai) * 100).toFixed(1) : '0.0';
+
+      const el = document.createElement('div');
+      el.className = 'node' + (isActive ? ' active' : '');
+      el.dataset.nodeid = nodeId;
+      const pctDoMax = maxVal > 0 ? Math.max(2, Math.min(100, (node.agg[MEASURES[0].key] / maxVal) * 100)) : 0;
+      el.innerHTML = `
+        <div class="lbl"><span>${node.label}</span><span class="pct">${pct}%</span></div>
+        <div class="headline-bar"><div class="headline-fill" style="width:${pctDoMax}%"></div></div>
+        ${MEASURES.map(m => metricRowNode(m, node.agg[m.key], maxVal)).join('')}
+      `;
+      el.addEventListener('click', () => {
+        const tinhaNiveisMaisFundos = path.length > level + 1;
+        const profundidadeAlvo = tinhaNiveisMaisFundos ? path.length : level + 1;
+
+        path = path.slice(0, level);
+        path.push({dim, value: node.label});
+
+        // Se já existia decomposição mais funda antes do clique, mantém a
+        // mesma quantidade de colunas abertas, reajustando cada nível
+        // seguinte para o maior valor dentro do novo ramo selecionado.
+        let subsetAuto = filterByPath(DATA, path);
+        for (let lv = level + 1; lv < profundidadeAlvo && lv < DIMENSIONS.length; lv++){
+          if (!subsetAuto.length) break;
+          const nodesAuto = aggregateBy(subsetAuto, DIMENSIONS[lv]);
+          if (!nodesAuto.length) break;
+          path.push({dim: DIMENSIONS[lv], value: nodesAuto[0].label}); // já vem ordenado desc
+          subsetAuto = filterByPath(DATA, path);
+        }
+
+        render();
+        scrollParaNovaColuna();
+      });
+      nodesWrap.appendChild(el);
+
+      if (isActive){
+        connectors.push({fromId: lastSelectedId, toColIndex: level});
+        lastSelectedId = nodeId;
+      }
+    });
+
+    board.appendChild(col);
+    subset = path[level] ? filterByPath(DATA, path.slice(0, level+1)) : null;
+  }
+
+  drawConnectors(connectors);
+}
+
+function scrollParaNovaColuna(){
+  requestAnimationFrame(() => {
+    const cols = document.querySelectorAll('.col');
+    const last = cols[cols.length - 1];
+    if (last) last.scrollIntoView({behavior:'smooth', block:'center', inline:'end'});
+  });
+}
+
+function drawConnectors(connectors){
+  const svg = document.getElementById('svgConnectors');
+  const stage = document.getElementById('stage');
+  const stageRect = stage.getBoundingClientRect();
+  svg.setAttribute('width', stage.scrollWidth);
+  svg.setAttribute('height', stage.scrollHeight);
+  svg.innerHTML = '';
+
+  connectors.forEach(c => {
+    const fromEl = document.querySelector(`[data-nodeid="${c.fromId}"]`);
+    const toCol = document.querySelector(`.col[data-col-index="${c.toColIndex}"]`);
+    if (!fromEl || !toCol) return;
+    const toActiveEl = toCol.querySelector('.node.active') || toCol;
+
+    const fromRect = fromEl.getBoundingClientRect();
+    const toRect = toActiveEl.getBoundingClientRect();
+
+    const x1 = fromRect.right - stageRect.left + stage.scrollLeft;
+    const y1 = fromRect.top + fromRect.height/2 - stageRect.top + stage.scrollTop;
+    const x2 = toRect.left - stageRect.left + stage.scrollLeft;
+    const y2 = toRect.top + toRect.height/2 - stageRect.top + stage.scrollTop;
+
+    const midX = (x1 + x2) / 2;
+    const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+    path.setAttribute('d', `M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2} ${y2}`);
+    path.setAttribute('stroke', '#FF5A1F');
+    path.setAttribute('stroke-width', '2');
+    path.setAttribute('fill', 'none');
+    path.setAttribute('opacity', '0.75');
+    svg.appendChild(path);
+  });
+}
+
+document.getElementById('btnReload').addEventListener('click', () => carregarDados(true));
+document.getElementById('selEmpresa').addEventListener('change', (e) => {
+  empresaSelecionada = e.target.value;
+  aplicarFiltroEmpresa();
+  path = [];
+  render();
+});
+window.addEventListener('resize', () => drawConnectors([]));
+carregarDados(false);
+</script>
+</body>
+</html>
