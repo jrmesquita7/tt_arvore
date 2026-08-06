@@ -694,9 +694,13 @@ function drawConnectors(connectors){
     const fromRect = fromEl.getBoundingClientRect();
     const toRect = toActiveEl.getBoundingClientRect();
 
-    const x1 = fromRect.right - stageRect.left + stage.scrollLeft;
+    // Um pequeno respiro nas pontas: com as colunas mais compactas o
+    // espaço entre elas ficou curto e a linha, saindo rente à borda dos
+    // cards, parecia colada neles.
+    const respiro = 3;
+    const x1 = fromRect.right - stageRect.left + stage.scrollLeft + respiro;
     const y1 = fromRect.top + fromRect.height/2 - stageRect.top + stage.scrollTop;
-    const x2 = toRect.left - stageRect.left + stage.scrollLeft;
+    const x2 = toRect.left - stageRect.left + stage.scrollLeft - respiro;
     const y2 = toRect.top + toRect.height/2 - stageRect.top + stage.scrollTop;
 
     const midX = (x1 + x2) / 2;
