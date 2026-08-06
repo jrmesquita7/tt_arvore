@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Árvore de Decomposição — Débito Associado</title>
+<title>Árvore de Troca de Titularidade</title>
 <style>
   /* ==========================================================================
      PALETA -- extraída da peça de campanha oficial "Atitude para Transformar"
@@ -159,7 +159,51 @@
   .stage::-webkit-scrollbar-thumb:hover{background:var(--ink-faint);}
 
   svg.connectors{position:absolute;top:0;left:0;pointer-events:none;overflow:visible;z-index:5;}
-  .board{display:flex;gap:30px;align-items:flex-start;position:relative;z-index:1;}
+  .board{display:flex;gap:30px;align-items:flex-start;position:relative;z-index:1;transition:opacity .2s var(--ease), filter .2s var(--ease);}
+  .board.is-refreshing{opacity:.45;filter:saturate(.65);pointer-events:none;}
+
+  /* ---------- loading overlay ---------- */
+  .loading-overlay{
+    position:fixed;inset:0;z-index:60;
+    display:flex;align-items:center;justify-content:center;
+    background:rgba(243,245,249,.8);
+    backdrop-filter:blur(8px) saturate(140%);
+    -webkit-backdrop-filter:blur(8px) saturate(140%);
+    opacity:0;visibility:hidden;pointer-events:none;
+    transition:opacity .25s var(--ease), visibility 0s linear .25s;
+  }
+  .loading-overlay.is-active{
+    opacity:1;visibility:visible;pointer-events:auto;
+    transition:opacity .25s var(--ease), visibility 0s linear 0s;
+  }
+  .loading-card{
+    display:flex;flex-direction:column;align-items:center;gap:15px;
+    background:var(--panel);border:1px solid var(--line);
+    border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);
+    padding:40px 48px;min-width:260px;
+    transform:translateY(10px) scale(.97);opacity:0;
+    transition:transform .35s var(--ease), opacity .35s var(--ease);
+  }
+  .loading-overlay.is-active .loading-card{transform:translateY(0) scale(1);opacity:1;}
+
+  .loading-ring{
+    width:58px;height:58px;border-radius:50%;
+    background:conic-gradient(from 0deg, var(--eq-orange), var(--eq-gold), var(--eq-blue), var(--eq-orange));
+    animation:ringSpin .9s linear infinite;
+    -webkit-mask:radial-gradient(farthest-side, transparent calc(100% - 7px), #000 calc(100% - 7px));
+    mask:radial-gradient(farthest-side, transparent calc(100% - 7px), #000 calc(100% - 7px));
+  }
+  @keyframes ringSpin{to{transform:rotate(360deg);}}
+
+  .loading-title{font-size:.94rem;font-weight:700;color:var(--eq-navy);letter-spacing:.01em;text-align:center;}
+  .loading-sub{font-size:.78rem;color:var(--ink-soft);text-align:center;min-height:16px;}
+
+  .loading-dots{display:flex;gap:7px;margin-top:2px;}
+  .loading-dots span{width:6px;height:6px;border-radius:50%;display:inline-block;animation:dotBounce 1s ease-in-out infinite;}
+  .loading-dots span:nth-child(1){background:var(--m1);animation-delay:0s;}
+  .loading-dots span:nth-child(2){background:var(--m2);animation-delay:.15s;}
+  .loading-dots span:nth-child(3){background:var(--m3);animation-delay:.3s;}
+  @keyframes dotBounce{0%,80%,100%{transform:translateY(0);opacity:.45;}40%{transform:translateY(-6px);opacity:1;}}
   .root-col,.col{min-width:242px;flex:0 0 242px;position:relative;}
   .col-head{display:flex;justify-content:space-between;align-items:center;padding-bottom:8px;margin-bottom:14px;border-bottom:2px solid var(--line-strong);}
   .col-head .name{font-weight:700;font-size:.76rem;color:var(--eq-navy);letter-spacing:.04em;text-transform:uppercase;}
@@ -272,12 +316,20 @@
 </style>
 </head>
 <body>
+<div class="loading-overlay" id="loadingOverlay" aria-hidden="true">
+  <div class="loading-card">
+    <div class="loading-ring" aria-hidden="true"></div>
+    <div class="loading-title">Montando a árvore de decomposição</div>
+    <div class="loading-sub" id="loadingSub">Consultando o Snowflake...</div>
+    <div class="loading-dots" aria-hidden="true"><span></span><span></span><span></span></div>
+  </div>
+</div>
 <div class="wrap">
   <header id="siteHeader">
     <div class="brand">
       <div class="brand-mark" aria-hidden="true"></div>
       <div class="title-block">
-        <h1>Débito Associado — Troca de Titularidade</h1>
+        <h1>Árvore de Troca de Titularidade</h1>
         <div class="meta-line">
           <span class="meta" id="metaInfo">carregando...</span>
           <span class="badge-ano">Ano de referência: 2026</span>
@@ -324,6 +376,7 @@ let FULL_DATA = [];
 let DATA = [];
 let path = [];
 let empresaSelecionada = '__todas__';
+let boardHasRendered = false;
 
 function fmtBRL(v){ return "R$ " + (v||0).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2}); }
 
@@ -339,13 +392,31 @@ function setStatus(msg, kind){
   const text = document.createElement('span');
   text.textContent = msg;
   statusEl.appendChild(text);
+
+  const loadingSub = document.getElementById('loadingSub');
+  if (loadingSub) loadingSub.textContent = msg;
+}
+
+function showLoadingOverlay(){
+  document.getElementById('loadingOverlay').classList.add('is-active');
+}
+function hideLoadingOverlay(){
+  document.getElementById('loadingOverlay').classList.remove('is-active');
 }
 
 async function carregarDados(forcarAtualizacao){
   const metaEl = document.getElementById('metaInfo');
   const btn = document.getElementById('btnReload');
+  const board = document.getElementById('board');
+  const isFirstLoad = !boardHasRendered;
+
   btn.classList.add('is-loading');
   btn.disabled = true;
+  if (isFirstLoad){
+    showLoadingOverlay();
+  } else {
+    board.classList.add('is-refreshing');
+  }
   setStatus(forcarAtualizacao ? 'Consultando o Snowflake (pode levar alguns segundos)...' : 'Carregando dados em cache...', 'loading');
   try{
     const url = forcarAtualizacao ? `${API_URL}?atualizar=1` : API_URL;
@@ -362,12 +433,15 @@ async function carregarDados(forcarAtualizacao){
     aplicarFiltroEmpresa();
     path = [];
     render();
+    boardHasRendered = true;
   } catch(err){
     setStatus('Erro ao carregar dados: ' + err.message, 'error');
     console.error(err);
   } finally {
     btn.classList.remove('is-loading');
     btn.disabled = false;
+    board.classList.remove('is-refreshing');
+    hideLoadingOverlay();
   }
 }
 
@@ -527,7 +601,7 @@ function render(){
     subset = path[level] ? filterByPath(DATA, path.slice(0, level+1)) : null;
   }
 
-  requestAnimationFrame(() => drawConnectors(connectors));
+  drawConnectors(connectors);
 }
 
 function scrollParaNovaColuna(){
@@ -544,14 +618,9 @@ function drawConnectors(connectors){
   const stageRect = stage.getBoundingClientRect();
   svg.setAttribute('width', stage.scrollWidth);
   svg.setAttribute('height', stage.scrollHeight);
-  svg.innerHTML = `<defs>
-    <linearGradient id="connGrad" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0%" stop-color="#FF5A1F"/>
-      <stop offset="100%" stop-color="#2E86D1"/>
-    </linearGradient>
-  </defs>`;
+  svg.innerHTML = '';
 
-  connectors.forEach((c, i) => {
+  connectors.forEach((c) => {
     const fromEl = document.querySelector(`[data-nodeid="${c.fromId}"]`);
     const toCol = document.querySelector(`.col[data-col-index="${c.toColIndex}"]`);
     if (!fromEl || !toCol) return;
@@ -567,20 +636,12 @@ function drawConnectors(connectors){
 
     const midX = (x1 + x2) / 2;
     const path = document.createElementNS('http://www.w3.org/2000/svg','path');
-    const d = `M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2} ${y2}`;
-    path.setAttribute('d', d);
-    path.setAttribute('stroke', 'url(#connGrad)');
-    path.setAttribute('stroke-width', '2.25');
+    path.setAttribute('d', `M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2} ${y2}`);
+    path.setAttribute('stroke', '#FF5A1F');
+    path.setAttribute('stroke-width', '2');
     path.setAttribute('fill', 'none');
-    path.setAttribute('stroke-linecap', 'round');
-    path.setAttribute('opacity', '0.8');
-
+    path.setAttribute('opacity', '0.75');
     svg.appendChild(path);
-    const realLen = path.getTotalLength();
-    path.style.strokeDasharray = realLen;
-    path.style.strokeDashoffset = realLen;
-    path.style.transition = `stroke-dashoffset .5s ${0.05 * i}s cubic-bezier(.2,.7,.2,1)`;
-    requestAnimationFrame(() => { path.style.strokeDashoffset = '0'; });
   });
 }
 
@@ -598,7 +659,9 @@ document.addEventListener('scroll', () => {
   siteHeader.classList.toggle('is-scrolled', window.scrollY > 4);
 }, {passive:true});
 
-carregarDados(false);
+// No primeiro carregamento ainda não existe cache útil na sessão do
+// usuário, então força a consulta ao Snowflake em vez de esperar o cache.
+carregarDados(true);
 </script>
 </body>
 </html>
