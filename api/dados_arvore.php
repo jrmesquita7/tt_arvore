@@ -27,6 +27,8 @@ $snowflakeConfig = [
 
 $cacheDir  = __DIR__ . '/cache';
 $cacheFile = $cacheDir . '/dados_arvore.json';
+$cacheTtlSegundos = 3600; // cache expira depois de 1h; a partir daí uma
+                          // carga normal já dispara consulta nova sozinha
 
 if (!file_exists($cacheDir)) {
     mkdir($cacheDir, 0755, true);
@@ -102,8 +104,9 @@ function consultarSnowflake($config) {
 // ----------------------------------------------------------------------------
 try {
     $pediuAtualizar = isset($_POST['atualizar']) || isset($_GET['atualizar']);
+    $cacheValido = file_exists($cacheFile) && (time() - filemtime($cacheFile)) < $cacheTtlSegundos;
 
-    if ($pediuAtualizar || !file_exists($cacheFile)) {
+    if ($pediuAtualizar || !$cacheValido) {
         $dados = consultarSnowflake($snowflakeConfig);
         $timestamp = date('Y-m-d H:i:s');
 

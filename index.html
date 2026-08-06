@@ -418,7 +418,7 @@ async function carregarDados(forcarAtualizacao){
   } else {
     board.classList.add('is-refreshing');
   }
-  setStatus(forcarAtualizacao ? 'Consultando o Snowflake (pode levar alguns segundos)...' : 'Carregando dados em cache...', 'loading');
+  setStatus(forcarAtualizacao ? 'Consultando o Snowflake (pode levar alguns segundos)...' : 'Carregando dados (usa cache de até 1h, se disponível)...', 'loading');
   try{
     const url = forcarAtualizacao ? `${API_URL}?atualizar=1` : API_URL;
     const resp = await fetch(url, {cache:'no-store'});
@@ -661,9 +661,10 @@ document.addEventListener('scroll', () => {
   siteHeader.classList.toggle('is-scrolled', window.scrollY > 4);
 }, {passive:true});
 
-// No primeiro carregamento ainda não existe cache útil na sessão do
-// usuário, então força a consulta ao Snowflake em vez de esperar o cache.
-carregarDados(true);
+// Carga normal: o backend decide sozinho se o cache (válido por até 1h)
+// já basta ou se precisa consultar o Snowflake de novo. O botão
+// "Recarregar dados" é quem força uma consulta nova a qualquer momento.
+carregarDados(false);
 </script>
 </body>
 </html>
