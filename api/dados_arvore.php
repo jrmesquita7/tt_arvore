@@ -51,7 +51,7 @@ function montarQuery() {
     return "
         SELECT
             EMPRESA,
-            CLASSE,
+            CLASSE_CONSUMO,
             SEGMENTO,
             STATUS_COMERCIAL,
             ORIGEM_TROCA,
