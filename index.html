@@ -205,6 +205,61 @@
   .loading-dots span:nth-child(2){background:var(--m2);animation-delay:.15s;}
   .loading-dots span:nth-child(3){background:var(--m3);animation-delay:.3s;}
   @keyframes dotBounce{0%,80%,100%{transform:translateY(0);opacity:.45;}40%{transform:translateY(-6px);opacity:1;}}
+
+  /* ---------- guia de uso (tour) ---------- */
+  button.guide-btn{
+    display:inline-flex;align-items:center;gap:6px;
+    background:#fff;color:var(--eq-navy);border:1px solid var(--line-strong);
+    padding:8px 15px 8px 12px;font-size:.78rem;cursor:pointer;
+    border-radius:var(--radius-sm);font-weight:600;font-family:inherit;
+    transition:border-color .15s var(--ease), color .15s var(--ease), background .15s var(--ease);
+  }
+  button.guide-btn svg{width:14px;height:14px;flex:0 0 auto;}
+  button.guide-btn:hover{border-color:var(--eq-orange);color:var(--eq-orange);background:#FFF7F3;}
+  button.guide-btn:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(255,90,31,.18);}
+
+  .tour-shield{position:fixed;inset:0;z-index:9989;display:none;background:transparent;}
+  .tour-shield.is-active{display:block;}
+
+  .tour-spotlight{
+    position:fixed;z-index:9990;display:none;pointer-events:none;
+    border-radius:12px;
+    box-shadow:0 0 0 9999px rgba(14,27,74,.74), 0 0 0 2px var(--eq-orange), 0 0 22px rgba(255,90,31,.35);
+    transition:top .3s var(--ease), left .3s var(--ease), width .3s var(--ease), height .3s var(--ease);
+  }
+  .tour-spotlight.is-active{display:block;}
+
+  .tour-popover{
+    position:fixed;z-index:9991;display:none;
+    width:302px;max-width:calc(100vw - 24px);
+    background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);
+    box-shadow:var(--shadow-lg);padding:18px 20px 16px;
+    transition:top .3s var(--ease), left .3s var(--ease);
+  }
+  .tour-popover.is-active{display:block;}
+  .tour-close{
+    position:absolute;top:9px;right:9px;width:24px;height:24px;
+    border:none;background:transparent;color:var(--ink-faint);font-size:1.15rem;line-height:1;
+    cursor:pointer;border-radius:6px;
+  }
+  .tour-close:hover{background:var(--canvas-2);color:var(--ink);}
+  .tour-step-count{font-size:.65rem;font-weight:700;color:var(--eq-orange);text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px;}
+  .tour-title{font-size:.92rem;font-weight:700;color:var(--eq-navy);margin-bottom:6px;padding-right:16px;}
+  .tour-text{font-size:.78rem;line-height:1.55;color:var(--ink-soft);margin-bottom:15px;}
+  .tour-footer{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+  .tour-skip{background:none;border:none;color:var(--ink-faint);font-size:.72rem;cursor:pointer;text-decoration:underline;padding:0;font-family:inherit;}
+  .tour-skip:hover{color:var(--ink-soft);}
+  .tour-nav{display:flex;gap:8px;}
+  .tour-btn{
+    font-family:inherit;font-size:.76rem;font-weight:600;border-radius:var(--radius-sm);
+    padding:7px 14px;cursor:pointer;transition:background .15s var(--ease), border-color .15s var(--ease);
+  }
+  .tour-btn-ghost{background:#fff;border:1px solid var(--line-strong);color:var(--ink);}
+  .tour-btn-ghost:hover{border-color:var(--ink-faint);}
+  .tour-btn-ghost:disabled{opacity:.4;cursor:default;}
+  .tour-btn-solid{background:var(--eq-navy);border:1px solid var(--eq-navy);color:#fff;}
+  .tour-btn-solid:hover{background:var(--eq-navy-3);}
+
   .root-col,.col{min-width:188px;flex:0 0 188px;position:relative;}
   .col-head{display:flex;justify-content:space-between;align-items:center;padding-bottom:6px;margin-bottom:10px;border-bottom:2px solid var(--line-strong);}
   .col-head .name{font-weight:700;font-size:.7rem;color:var(--eq-navy);letter-spacing:.03em;text-transform:uppercase;}
@@ -338,6 +393,21 @@
     <div class="loading-dots" aria-hidden="true"><span></span><span></span><span></span></div>
   </div>
 </div>
+<div class="tour-shield" id="tourShield" aria-hidden="true"></div>
+<div class="tour-spotlight" id="tourSpotlight" aria-hidden="true"></div>
+<div class="tour-popover" id="tourPopover" role="dialog" aria-modal="true" aria-labelledby="tourTitle" aria-describedby="tourText">
+  <button class="tour-close" id="tourClose" type="button" aria-label="Fechar guia">×</button>
+  <div class="tour-step-count" id="tourStepCount">Passo 1 de 8</div>
+  <div class="tour-title" id="tourTitle"></div>
+  <div class="tour-text" id="tourText"></div>
+  <div class="tour-footer">
+    <button class="tour-skip" id="tourSkip" type="button">Pular tour</button>
+    <div class="tour-nav">
+      <button class="tour-btn tour-btn-ghost" id="tourPrev" type="button">Anterior</button>
+      <button class="tour-btn tour-btn-solid" id="tourNext" type="button">Próximo</button>
+    </div>
+  </div>
+</div>
 <div class="wrap">
   <header id="siteHeader">
     <div class="brand">
@@ -363,6 +433,10 @@
         <span><i class="swatch" style="background:var(--m2)"></i>Parcelas</span>
         <span><i class="swatch" style="background:var(--m3)"></i>CNR</span>
       </div>
+      <button class="guide-btn" id="btnGuia" type="button">
+        <svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7.7" stroke="currentColor" stroke-width="1.5"/><path d="M7.7 7.9a2.3 2.3 0 1 1 3.15 2.14c-.75.32-1.35.9-1.35 1.76v.2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="10" cy="14.3" r="0.95" fill="currentColor"/></svg>
+        <span>Guia de uso</span>
+      </button>
       <button class="reload" id="btnReload" type="button">
         <svg viewBox="0 0 20 20" fill="none"><path d="M16.5 10a6.5 6.5 0 1 1-1.9-4.6M16.5 3v4.5H12" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
         <span>Recarregar dados</span>
@@ -379,7 +453,7 @@
 
 <script>
 const API_URL = 'api/dados_arvore.php';
-const DIMENSIONS = ['CLASSE','SEGMENTO','STATUS_COMERCIAL','ORIGEM_TROCA','GRUPO_TARIFARIO','VERIFICACAO','FATURA_FINAL'];
+const DIMENSIONS = ['FATURA_FINAL','ORIGEM_TROCA','VERIFICACAO','GRUPO_TARIFARIO','SEGMENTO','CLASSE','STATUS_COMERCIAL'];
 const MEASURES = [
   {key:'TOTAL_AB_CC_ANT',  label:'Débito',   color:'var(--m1)'},
   {key:'TOTAL_AB_PARCELAS',label:'Parcelas', color:'var(--m2)'},
@@ -728,6 +802,125 @@ const siteHeader = document.getElementById('siteHeader');
 document.addEventListener('scroll', () => {
   siteHeader.classList.toggle('is-scrolled', window.scrollY > 4);
 }, {passive:true});
+
+// ---------------------------------------------------------------------------
+// Guia de uso: tour com spotlight. Cada passo aponta um seletor CSS; o
+// elemento real de trás continua no lugar (sem mexer em z-index dele) e um
+// elemento fixo por cima escurece a tela inteira com box-shadow gigante,
+// deixando um "buraco" transparente exatamente no retângulo do alvo.
+// ---------------------------------------------------------------------------
+const TOUR_STEPS = [
+  { selector: '.root-card', title: 'Total geral',
+    text: 'Aqui fica o valor total do Débito Associado. Parcelas e CNR já estão contidos nele — não devem ser somados ao total.' },
+  { selector: '#selEmpresa', title: 'Filtrar por empresa',
+    text: 'Escolha uma empresa aqui pra recalcular os valores só dela. Se você já tiver decomposto a árvore, ela continua aberta — só os números mudam.' },
+  { selector: '.legend', title: 'O que cada cor significa',
+    text: 'Laranja é o Débito Associado (a métrica principal da árvore), azul é Parcelas e dourado é CNR. As mesmas cores aparecem nas barrinhas de cada nó.' },
+  { selector: '.col[data-col-index="0"] .node:first-child', title: 'Clique pra decompor',
+    text: 'Cada card é um valor possível dessa dimensão. Clique nele (ou use Tab + Enter) pra abrir a próxima coluna e ver como esse valor se decompõe.' },
+  { selector: '.col[data-col-index="0"] .node:first-child .pct', title: 'Percentual do total',
+    text: 'Mostra quanto aquele nó representa do total do nível anterior — não do total geral da árvore.' },
+  { selector: '.col.col-locked', title: 'Próximos passos, à vista',
+    text: 'As colunas mais à direita já mostram o nome da próxima dimensão, mesmo antes de você chegar nelas. Elas liberam os valores assim que você seleciona o nó anterior.' },
+  { selector: '#btnReload', title: 'Atualizar dados',
+    text: 'Os dados ficam em cache por até 1 hora. Se precisar do valor mais recente na hora, clique aqui pra forçar uma nova consulta ao Snowflake.' },
+  { selector: '#stage', title: 'Mais colunas pra ver',
+    text: 'A árvore tem 7 níveis de decomposição. Arraste pros lados ou use a barra de rolagem embaixo pra ver as colunas que não cabem na tela.' },
+];
+
+let tourAtivo = false;
+let tourIndex = 0;
+
+function iniciarTour(){
+  path = [];
+  render();
+  tourAtivo = true;
+  tourIndex = 0;
+  document.getElementById('tourShield').classList.add('is-active');
+  document.getElementById('tourSpotlight').classList.add('is-active');
+  document.getElementById('tourPopover').classList.add('is-active');
+  mostrarPassoTour();
+}
+
+function encerrarTour(){
+  tourAtivo = false;
+  document.getElementById('tourShield').classList.remove('is-active');
+  document.getElementById('tourSpotlight').classList.remove('is-active');
+  document.getElementById('tourPopover').classList.remove('is-active');
+}
+
+function mostrarPassoTour(){
+  const step = TOUR_STEPS[tourIndex];
+  const el = document.querySelector(step.selector);
+  if (!el){
+    // alvo não existe nesse momento (ex.: nenhuma coluna travada) — pula o passo
+    if (tourIndex < TOUR_STEPS.length - 1){ tourIndex++; mostrarPassoTour(); }
+    else { encerrarTour(); }
+    return;
+  }
+  el.scrollIntoView({block:'center', inline:'center', behavior:'auto'});
+  requestAnimationFrame(() => {
+    const rect = el.getBoundingClientRect();
+    posicionarSpotlightTour(rect);
+    preencherPopoverTour(step, tourIndex, TOUR_STEPS.length);
+    requestAnimationFrame(() => posicionarPopoverTour(rect));
+  });
+}
+
+function posicionarSpotlightTour(rect){
+  const pad = 6;
+  const sp = document.getElementById('tourSpotlight');
+  sp.style.top = (rect.top - pad) + 'px';
+  sp.style.left = (rect.left - pad) + 'px';
+  sp.style.width = (rect.width + pad * 2) + 'px';
+  sp.style.height = (rect.height + pad * 2) + 'px';
+}
+
+function preencherPopoverTour(step, idx, total){
+  document.getElementById('tourStepCount').textContent = `Passo ${idx + 1} de ${total}`;
+  document.getElementById('tourTitle').textContent = step.title;
+  document.getElementById('tourText').textContent = step.text;
+  document.getElementById('tourPrev').disabled = idx === 0;
+  document.getElementById('tourNext').textContent = idx === total - 1 ? 'Concluir' : 'Próximo';
+}
+
+function posicionarPopoverTour(rect){
+  const pop = document.getElementById('tourPopover');
+  const margin = 14;
+  const vw = window.innerWidth, vh = window.innerHeight;
+  const popRect = pop.getBoundingClientRect();
+
+  let top = rect.bottom + margin;
+  if (top + popRect.height > vh - 10){
+    top = rect.top - popRect.height - margin;
+  }
+  if (top < 10) top = 10;
+
+  let left = rect.left;
+  if (left + popRect.width > vw - 10) left = vw - popRect.width - 10;
+  if (left < 10) left = 10;
+
+  pop.style.top = top + 'px';
+  pop.style.left = left + 'px';
+}
+
+document.getElementById('btnGuia').addEventListener('click', iniciarTour);
+document.getElementById('tourClose').addEventListener('click', encerrarTour);
+document.getElementById('tourSkip').addEventListener('click', encerrarTour);
+document.getElementById('tourPrev').addEventListener('click', () => {
+  if (tourIndex > 0){ tourIndex--; mostrarPassoTour(); }
+});
+document.getElementById('tourNext').addEventListener('click', () => {
+  if (tourIndex < TOUR_STEPS.length - 1){ tourIndex++; mostrarPassoTour(); }
+  else { encerrarTour(); }
+});
+document.addEventListener('keydown', (e) => {
+  if (!tourAtivo) return;
+  if (e.key === 'Escape') encerrarTour();
+  else if (e.key === 'ArrowRight') document.getElementById('tourNext').click();
+  else if (e.key === 'ArrowLeft') document.getElementById('tourPrev').click();
+});
+window.addEventListener('resize', () => { if (tourAtivo) mostrarPassoTour(); });
 
 // Carga normal: o backend decide sozinho se o cache (válido por até 1h)
 // já basta ou se precisa consultar o Snowflake de novo. O botão
