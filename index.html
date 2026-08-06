@@ -483,6 +483,28 @@ function aggregateBy(rows, dim){
   })).sort((a,b) => b.agg[MEASURES[0].key] - a.agg[MEASURES[0].key]);
 }
 
+// Reaplica a decomposição já aberta (path) em cima do DATA atual, em vez de
+// recolher a árvore. Mantém o valor escolhido em cada nível quando ele
+// ainda existir no novo recorte; se não existir mais (ex.: empresa sem
+// aquele valor), cai pro nó de maior valor daquele nível, igual ao
+// preenchimento automático usado ao clicar num nó.
+function reaplicarPathNoFiltro(){
+  const novoPath = [];
+  let subset = DATA;
+  for (let level = 0; level < path.length; level++){
+    if (!subset || subset.length === 0) break;
+    const dim = DIMENSIONS[level];
+    const nodesNivel = aggregateBy(subset, dim);
+    if (!nodesNivel.length) break;
+    const valorAntigo = path[level].value;
+    const aindaExiste = nodesNivel.some(n => n.label === valorAntigo);
+    const valorEscolhido = aindaExiste ? valorAntigo : nodesNivel[0].label; // já vem ordenado desc
+    novoPath.push({dim, value: valorEscolhido});
+    subset = filterByPath(DATA, novoPath);
+  }
+  path = novoPath;
+}
+
 function metricRowRoot(measure, value, maxVal){
   const pct = maxVal > 0 ? Math.max(2, Math.min(100, (value / maxVal) * 100)) : 0;
   return `<div class="metric-row">
@@ -651,7 +673,7 @@ document.getElementById('btnReload').addEventListener('click', () => carregarDad
 document.getElementById('selEmpresa').addEventListener('change', (e) => {
   empresaSelecionada = e.target.value;
   aplicarFiltroEmpresa();
-  path = [];
+  reaplicarPathNoFiltro();
   render();
 });
 window.addEventListener('resize', () => drawConnectors([]));
