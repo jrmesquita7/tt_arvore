@@ -160,7 +160,7 @@
   .stage::-webkit-scrollbar-thumb:hover{background:var(--ink-faint);}
 
   svg.connectors{position:absolute;top:0;left:0;pointer-events:none;overflow:visible;z-index:5;}
-  .board{display:flex;gap:30px;align-items:flex-start;position:relative;z-index:1;transition:opacity .2s var(--ease), filter .2s var(--ease);}
+  .board{display:flex;gap:16px;align-items:flex-start;position:relative;z-index:1;transition:opacity .2s var(--ease), filter .2s var(--ease);}
   .board.is-refreshing{opacity:.45;filter:saturate(.65);pointer-events:none;}
 
   /* ---------- loading overlay ---------- */
@@ -205,11 +205,11 @@
   .loading-dots span:nth-child(2){background:var(--m2);animation-delay:.15s;}
   .loading-dots span:nth-child(3){background:var(--m3);animation-delay:.3s;}
   @keyframes dotBounce{0%,80%,100%{transform:translateY(0);opacity:.45;}40%{transform:translateY(-6px);opacity:1;}}
-  .root-col,.col{min-width:242px;flex:0 0 242px;position:relative;}
-  .col-head{display:flex;justify-content:space-between;align-items:center;padding-bottom:8px;margin-bottom:14px;border-bottom:2px solid var(--line-strong);}
-  .col-head .name{font-weight:700;font-size:.76rem;color:var(--eq-navy);letter-spacing:.04em;text-transform:uppercase;}
-  .col-head .count{font-size:.68rem;color:var(--ink-faint);font-variant-numeric:tabular-nums;}
-  .root-block{padding-top:46px;}
+  .root-col,.col{min-width:188px;flex:0 0 188px;position:relative;}
+  .col-head{display:flex;justify-content:space-between;align-items:center;padding-bottom:6px;margin-bottom:10px;border-bottom:2px solid var(--line-strong);}
+  .col-head .name{font-weight:700;font-size:.7rem;color:var(--eq-navy);letter-spacing:.03em;text-transform:uppercase;}
+  .col-head .count{font-size:.64rem;color:var(--ink-faint);font-variant-numeric:tabular-nums;}
+  .root-block{padding-top:38px;}
 
   .col{animation:colIn .35s var(--ease) both;}
   @keyframes colIn{
@@ -217,11 +217,19 @@
     to{opacity:1;transform:translateX(0);}
   }
 
+  .col.col-locked{opacity:.5;}
+  .col-head.col-head-locked .name{color:var(--ink-faint);}
+  .locked-hint{
+    border:1px dashed var(--line-strong);border-radius:var(--radius-sm);
+    padding:12px 10px;font-size:.63rem;line-height:1.4;color:var(--ink-faint);
+    text-align:center;background:rgba(255,255,255,.35);
+  }
+
   /* ---------- root card ---------- */
   .root-card{
     position:relative;overflow:hidden;
     background:linear-gradient(155deg, var(--eq-navy-3) 0%, var(--eq-navy) 62%, var(--eq-navy-2) 100%);
-    color:#fff;padding:20px 20px 18px;border-radius:var(--radius-lg);
+    color:#fff;padding:15px 15px 13px;border-radius:var(--radius-lg);
     box-shadow:var(--shadow-lg);
   }
   .root-card::before{
@@ -236,11 +244,16 @@
     top:-90px;right:-70px;pointer-events:none;
   }
   .root-card .label{
-    font-size:.68rem;color:#B9C6DE;text-transform:uppercase;margin-bottom:12px;
-    letter-spacing:.06em;font-weight:700;
+    font-size:.64rem;color:#B9C6DE;text-transform:uppercase;margin-bottom:9px;
+    letter-spacing:.05em;font-weight:700;
   }
 
-  .metric-row{display:flex;align-items:center;gap:8px;margin:6px 0;}
+  .root-card .root-note{
+    margin-top:10px;padding-top:9px;border-top:1px solid rgba(255,255,255,.16);
+    font-size:.62rem;line-height:1.4;color:#B9C6DE;
+  }
+
+  .metric-row{display:flex;align-items:center;gap:7px;margin:5px 0;}
   .metric-row .dot{width:7px;height:7px;border-radius:2px;flex:0 0 7px;}
   .metric-row .bar-track{flex:1;height:6px;background:var(--canvas-2);border-radius:4px;overflow:hidden;}
   .root-card .bar-track{background:rgba(255,255,255,.14);}
@@ -251,8 +264,8 @@
   /* ---------- node cards ---------- */
   .node{
     background:var(--panel);border:1px solid var(--line);
-    padding:10px 13px 12px;margin-bottom:9px;cursor:pointer;
-    border-radius:var(--radius-md);position:relative;
+    padding:7px 10px 8px;margin-bottom:6px;cursor:pointer;
+    border-radius:var(--radius-sm);position:relative;
     box-shadow:var(--shadow-xs);
     transition:border-color .15s var(--ease), box-shadow .18s var(--ease), transform .15s var(--ease), background .15s var(--ease);
     animation:nodeIn .28s var(--ease) both;
@@ -275,29 +288,29 @@
     box-shadow:var(--shadow-sm);
   }
   .node.active::before{
-    content:'';position:absolute;left:0;top:10px;bottom:10px;width:3px;
+    content:'';position:absolute;left:0;top:6px;bottom:6px;width:3px;
     border-radius:3px;background:var(--eq-orange);
   }
   .node:active{transform:translateY(-1px) scale(.996);}
 
   .node .lbl{
-    font-weight:600;font-size:.83rem;margin-bottom:6px;display:flex;justify-content:space-between;
-    gap:8px;color:var(--ink);align-items:center;
+    font-weight:600;font-size:.76rem;margin-bottom:4px;display:flex;justify-content:space-between;
+    gap:6px;color:var(--ink);align-items:center;
   }
   .node .lbl > span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .node .lbl .pct{
-    font-weight:700;color:var(--eq-navy);font-size:.66rem;flex:0 0 auto;
-    background:var(--canvas-2);padding:2px 7px;border-radius:20px;font-variant-numeric:tabular-nums;
+    font-weight:700;color:var(--eq-navy);font-size:.6rem;flex:0 0 auto;
+    background:var(--canvas-2);padding:1px 6px;border-radius:20px;font-variant-numeric:tabular-nums;
   }
   .node.active .lbl .pct{background:#FFE4D6;color:var(--eq-orange);}
 
-  .headline-bar{height:5px;background:var(--canvas-2);border-radius:4px;overflow:hidden;margin-bottom:10px;}
+  .headline-bar{height:4px;background:var(--canvas-2);border-radius:4px;overflow:hidden;margin-bottom:7px;}
   .headline-fill{height:100%;background:var(--eq-orange);border-radius:4px;transition:width .5s var(--ease);}
 
-  .node .metric-row{flex-direction:column;align-items:stretch;gap:3px;margin:7px 0;}
+  .node .metric-row{flex-direction:column;align-items:stretch;gap:2px;margin:4px 0;}
   .node .metric-row .top-line{display:flex;align-items:center;justify-content:space-between;}
-  .node .metric-row .lblval{font-size:.67rem;color:var(--ink-soft);}
-  .node .metric-row .bar-track{height:5px;}
+  .node .metric-row .lblval{font-size:.6rem;color:var(--ink-soft);}
+  .node .metric-row .bar-track{height:4px;}
 
   footer{
     margin-top:26px;border-top:1px solid var(--line);padding-top:14px;
@@ -533,6 +546,7 @@ function render(){
   rootCol.innerHTML = `<div class="root-card" data-nodeid="root">
       <div class="label">Débito Associado</div>
       ${MEASURES.map(m => metricRowRoot(m, totalGeral[m.key], totalGeral[MEASURES[0].key])).join('')}
+      <div class="root-note">Os valores de Parcelas e CNR já estão contidos no Débito acima — não devem ser somados a ele.</div>
     </div>`;
   board.appendChild(rootCol);
 
@@ -548,10 +562,24 @@ function render(){
   let subset = DATA;
   let lastSelectedId = 'root';
   const connectors = [];
+  let travado = false;
 
   for (let level = 0; level < DIMENSIONS.length; level++){
-    if (!subset || subset.length === 0) break;
     const dim = DIMENSIONS[level];
+
+    // Mostra desde já a coluna de toda dimensão futura (travada, sem
+    // opções calculadas ainda) pra o usuário ver de antemão qual é o
+    // próximo passo da decomposição, mesmo antes de chegar nesse nível.
+    if (travado || !subset || subset.length === 0){
+      travado = true;
+      const lockedCol = document.createElement('div');
+      lockedCol.className = 'col col-locked';
+      lockedCol.dataset.colIndex = level;
+      lockedCol.innerHTML = `<div class="col-head col-head-locked"><span class="name">${dim}</span></div><div class="locked-hint">Selecione o nó anterior para ver as opções</div>`;
+      board.appendChild(lockedCol);
+      continue;
+    }
+
     const nodes = aggregateBy(subset, dim);
     const maxVal = Math.max(...nodes.map(n => n.agg[MEASURES[0].key]), 1);
 
