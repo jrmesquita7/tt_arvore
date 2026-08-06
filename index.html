@@ -462,7 +462,7 @@
     <svg class="connectors" id="svgConnectors"></svg>
     <div class="board" id="board"></div>
   </div>
-  <footer>Dados ao vivo via PHP + Snowflake. Clique num nó (ou pressione Enter) pra expandir a próxima coluna. Base filtrada para o ano de 2026.</footer>
+  <footer>Dados ao vivo via PHP + Snowflake. Clique num nó (ou pressione Enter) pra expandir a próxima coluna; segure Ctrl/Cmd e clique em outro do mesmo nível pra combinar os dois. Base filtrada para o ano de 2026.</footer>
 </div>
 
 <script>
@@ -633,7 +633,7 @@ function aplicarFiltros(){
 }
 
 function filterByPath(data, path){
-  return data.filter(row => path.every(p => row[p.dim] === p.value));
+  return data.filter(row => path.every(p => p.values.includes(row[p.dim])));
 }
 function aggregate(rows){
   const out = {};
@@ -654,10 +654,11 @@ function aggregateBy(rows, dim){
 }
 
 // Reaplica a decomposição já aberta (path) em cima do DATA atual, em vez de
-// recolher a árvore. Mantém o valor escolhido em cada nível quando ele
-// ainda existir no novo recorte; se não existir mais (ex.: empresa sem
-// aquele valor), cai pro nó de maior valor daquele nível, igual ao
-// preenchimento automático usado ao clicar num nó.
+// recolher a árvore. Em cada nível, mantém os valores selecionados que
+// ainda existirem no novo recorte (um nível pode ter mais de um valor
+// selecionado via Ctrl+clique); se nenhum sobreviver (ex.: empresa sem
+// nenhum daqueles valores), cai pro nó de maior valor daquele nível, igual
+// ao preenchimento automático usado ao clicar num nó.
 function reaplicarPathNoFiltro(){
   const novoPath = [];
   let subset = DATA;
@@ -666,10 +667,10 @@ function reaplicarPathNoFiltro(){
     const dim = DIMENSIONS[level];
     const nodesNivel = aggregateBy(subset, dim);
     if (!nodesNivel.length) break;
-    const valorAntigo = path[level].value;
-    const aindaExiste = nodesNivel.some(n => n.label === valorAntigo);
-    const valorEscolhido = aindaExiste ? valorAntigo : nodesNivel[0].label; // já vem ordenado desc
-    novoPath.push({dim, value: valorEscolhido});
+    const valoresAntigos = path[level].values;
+    const sobreviventes = valoresAntigos.filter(v => nodesNivel.some(n => n.label === v));
+    const valoresEscolhidos = sobreviventes.length ? sobreviventes : [nodesNivel[0].label]; // já vem ordenado desc
+    novoPath.push({dim, values: valoresEscolhidos});
     subset = filterByPath(DATA, novoPath);
   }
   path = novoPath;
@@ -717,7 +718,7 @@ function render(){
   }
 
   let subset = DATA;
-  let lastSelectedId = 'root';
+  let lastActiveIds = ['root'];
   const connectors = [];
   let travado = false;
 
@@ -748,10 +749,11 @@ function render(){
     const nodesWrap = col.querySelector('.nodes');
 
     const totalPaiObj = level === 0 ? totalGeral : aggregate(filterByPath(DATA, path.slice(0,level)));
+    const activeIdsEsteNivel = [];
 
     nodes.forEach((node, idx) => {
       const nodeId = `c${level}_${idx}`;
-      const isActive = path[level] && path[level].value === node.label;
+      const isActive = !!(path[level] && path[level].values.includes(node.label));
       const totalPai = totalPaiObj[MEASURES[0].key];
       const pct = formatarPercentual(node.agg[MEASURES[0].key], totalPai);
 
@@ -768,42 +770,66 @@ function render(){
         <div class="headline-bar"><div class="headline-fill" style="width:${pctDoMax}%"></div></div>
         ${MEASURES.map(m => metricRowNode(m, node.agg[m.key], maxVal)).join('')}
       `;
-      const selecionar = () => {
+      // Ctrl/Cmd+clique acrescenta ou tira esse nó da seleção do nível em
+      // vez de substituí-la -- assim dá pra decompor a soma de vários
+      // valores do mesmo nível de uma vez (ex.: duas classes juntas).
+      const selecionar = (comCtrl) => {
+        const nivelAtual = path[level];
+        const jaSelecionadoAqui = !!nivelAtual && nivelAtual.values.includes(node.label);
+        const novosValues = (comCtrl && nivelAtual)
+          ? (jaSelecionadoAqui ? nivelAtual.values.filter(v => v !== node.label) : [...nivelAtual.values, node.label])
+          : [node.label];
+
         const tinhaNiveisMaisFundos = path.length > level + 1;
         const profundidadeAlvo = tinhaNiveisMaisFundos ? path.length : level + 1;
 
         path = path.slice(0, level);
-        path.push({dim, value: node.label});
+
+        if (!novosValues.length){
+          // desmarcou o último valor selecionado nesse nível -- fecha esse
+          // nível e tudo que vinha depois, já que não sobra ramo nenhum
+          // pra decompor mais fundo.
+          render();
+          scrollParaNovaColuna();
+          return;
+        }
+        path.push({dim, values: novosValues});
 
         // Se já existia decomposição mais funda antes do clique, mantém a
         // mesma quantidade de colunas abertas, reajustando cada nível
-        // seguinte para o maior valor dentro do novo ramo selecionado.
+        // seguinte para o maior valor dentro do novo recorte selecionado.
         let subsetAuto = filterByPath(DATA, path);
         for (let lv = level + 1; lv < profundidadeAlvo && lv < DIMENSIONS.length; lv++){
           if (!subsetAuto.length) break;
           const nodesAuto = aggregateBy(subsetAuto, DIMENSIONS[lv]);
           if (!nodesAuto.length) break;
-          path.push({dim: DIMENSIONS[lv], value: nodesAuto[0].label}); // já vem ordenado desc
+          path.push({dim: DIMENSIONS[lv], values: [nodesAuto[0].label]}); // já vem ordenado desc
           subsetAuto = filterByPath(DATA, path);
         }
 
         render();
         scrollParaNovaColuna();
       };
-      el.addEventListener('click', selecionar);
+      el.addEventListener('click', (e) => selecionar(e.ctrlKey || e.metaKey));
       el.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' || e.key === ' '){
           e.preventDefault();
-          selecionar();
+          selecionar(e.ctrlKey || e.metaKey);
         }
       });
       nodesWrap.appendChild(el);
 
       if (isActive){
-        connectors.push({fromId: lastSelectedId, toColIndex: level});
-        lastSelectedId = nodeId;
+        activeIdsEsteNivel.push(nodeId);
       }
     });
+
+    if (activeIdsEsteNivel.length){
+      lastActiveIds.forEach(fromId => {
+        activeIdsEsteNivel.forEach(toId => connectors.push({fromId, toId}));
+      });
+      lastActiveIds = activeIdsEsteNivel;
+    }
 
     board.appendChild(col);
     subset = path[level] ? filterByPath(DATA, path.slice(0, level+1)) : null;
@@ -830,12 +856,11 @@ function drawConnectors(connectors){
 
   connectors.forEach((c) => {
     const fromEl = document.querySelector(`[data-nodeid="${c.fromId}"]`);
-    const toCol = document.querySelector(`.col[data-col-index="${c.toColIndex}"]`);
-    if (!fromEl || !toCol) return;
-    const toActiveEl = toCol.querySelector('.node.active') || toCol;
+    const toEl = document.querySelector(`[data-nodeid="${c.toId}"]`);
+    if (!fromEl || !toEl) return;
 
     const fromRect = fromEl.getBoundingClientRect();
-    const toRect = toActiveEl.getBoundingClientRect();
+    const toRect = toEl.getBoundingClientRect();
 
     // Um pequeno respiro nas pontas: com as colunas mais compactas o
     // espaço entre elas ficou curto e a linha, saindo rente à borda dos
@@ -908,7 +933,7 @@ const TOUR_STEPS = [
   { selector: '.legend', title: 'O que cada cor significa',
     text: 'Laranja é o Débito Associado (a métrica principal da árvore), azul é Parcelas e dourado é CNR. As mesmas cores aparecem nas barrinhas de cada nó.' },
   { selector: '.col[data-col-index="0"] .node:first-child', title: 'Clique pra decompor',
-    text: 'Cada card é um valor dessa dimensão. Clique nele pra abrir a próxima coluna e ver como esse valor se decompõe.' },
+    text: 'Cada card é um valor dessa dimensão. Clique nele pra abrir a próxima coluna e ver como esse valor se decompõe. Segurando Ctrl (ou Cmd no Mac) e clicando em outro card do mesmo nível, você decompõe a soma dos dois juntos.' },
   { selector: '.col[data-col-index="0"] .node:first-child .pct', title: 'Percentual do total',
     text: 'Mostra quanto aquele nó representa do total do nível anterior não do total geral da árvore.' },
   { selector: '.col.col-locked', title: 'Próximos passos, à vista',
