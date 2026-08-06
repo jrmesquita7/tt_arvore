@@ -58,6 +58,7 @@ function montarQuery() {
             GRUPO_TARIFARIO,
             VERIFICACAO,
             FATURA_FINAL,
+            TO_CHAR(DATE_TRUNC('MONTH', DATA_CONCLUSAO), 'YYYY-MM') AS MES_CONCLUSAO,
             SUM(TOTAL_AB_CC_ANT)   AS TOTAL_AB_CC_ANT,
             SUM(TOTAL_AB_PARCELAS) AS TOTAL_AB_PARCELAS,
             SUM(VALOR_CNR)         AS VALOR_CNR

@@ -101,22 +101,24 @@
   }
 
   .controls{display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
-  .filtro-empresa{display:flex;align-items:center;gap:8px;font-size:.78rem;color:var(--ink-soft);}
-  .filtro-empresa label{font-weight:600;color:var(--ink);}
+  .filtro-empresa,.filtro-periodo{display:flex;align-items:center;gap:8px;font-size:.78rem;color:var(--ink-soft);}
+  .filtro-empresa label,.filtro-periodo label{font-weight:600;color:var(--ink);}
+  .periodo-sep{font-size:.72rem;color:var(--ink-faint);}
   .select-shell{position:relative;display:inline-flex;align-items:center;}
   .select-shell svg{position:absolute;right:9px;pointer-events:none;width:13px;height:13px;color:var(--ink-soft);}
-  .filtro-empresa select{
+  .filtro-empresa select,.filtro-periodo select{
     appearance:none;-webkit-appearance:none;
     border:1px solid var(--line-strong);border-radius:var(--radius-sm);
     padding:7px 28px 7px 11px;font-size:.8rem;font-family:inherit;
     background:#fff;color:var(--ink);cursor:pointer;
     transition:border-color .15s var(--ease), box-shadow .15s var(--ease);
   }
-  .filtro-empresa select:hover{border-color:var(--eq-blue);}
-  .filtro-empresa select:focus-visible{
+  .filtro-empresa select:hover,.filtro-periodo select:hover{border-color:var(--eq-blue);}
+  .filtro-empresa select:focus-visible,.filtro-periodo select:focus-visible{
     outline:none;border-color:var(--eq-orange);
     box-shadow:0 0 0 3px rgba(255,90,31,.18);
   }
+  .filtro-periodo select:disabled{cursor:default;opacity:.5;}
 
   .legend{display:flex;gap:16px;font-size:.75rem;color:var(--ink-soft);}
   .legend span{display:flex;align-items:center;gap:6px;}
@@ -428,6 +430,18 @@
           <svg viewBox="0 0 20 20" fill="none"><path d="M5 8l5 5 5-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </span>
       </div>
+      <div class="filtro-periodo">
+        <label for="selPeriodoDe">Período</label>
+        <span class="select-shell">
+          <select id="selPeriodoDe" disabled><option value="">--</option></select>
+          <svg viewBox="0 0 20 20" fill="none"><path d="M5 8l5 5 5-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+        <span class="periodo-sep">até</span>
+        <span class="select-shell">
+          <select id="selPeriodoAte" disabled><option value="">--</option></select>
+          <svg viewBox="0 0 20 20" fill="none"><path d="M5 8l5 5 5-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+      </div>
       <div class="legend">
         <span><i class="swatch" style="background:var(--m1)"></i>Débito Associado</span>
         <span><i class="swatch" style="background:var(--m2)"></i>Parcelas</span>
@@ -464,7 +478,16 @@ let FULL_DATA = [];
 let DATA = [];
 let path = [];
 let empresaSelecionada = '__todas__';
+let mesesDisponiveis = [];
+let periodoDe = null;
+let periodoAte = null;
 let boardHasRendered = false;
+
+const NOMES_MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+function fmtMes(aaaaMm){
+  const [ano, mes] = aaaaMm.split('-');
+  return `${NOMES_MESES[parseInt(mes, 10) - 1]}/${ano}`;
+}
 
 function fmtBRL(v){ return "R$ " + (v||0).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2}); }
 
@@ -532,7 +555,8 @@ async function carregarDados(forcarAtualizacao){
     setStatus('', '');
 
     montarFiltroEmpresa();
-    aplicarFiltroEmpresa();
+    montarFiltroPeriodo();
+    aplicarFiltros();
     path = [];
     render();
     boardHasRendered = true;
@@ -557,10 +581,55 @@ function montarFiltroEmpresa(){
   empresaSelecionada = sel.value;
 }
 
-function aplicarFiltroEmpresa(){
-  DATA = empresaSelecionada === '__todas__'
+// Popula os selects De/Até com os meses realmente presentes nos dados
+// (MES_CONCLUSAO, truncado no SQL). Sem coluna de data disponível (ou sem
+// nenhum valor não-nulo), os selects ficam desabilitados e o filtro vira
+// um no-op -- a árvore continua mostrando tudo, como antes dessa feature.
+function montarFiltroPeriodo(){
+  mesesDisponiveis = [...new Set(FULL_DATA.map(r => r.MES_CONCLUSAO).filter(Boolean))].sort();
+  const selDe = document.getElementById('selPeriodoDe');
+  const selAte = document.getElementById('selPeriodoAte');
+
+  if (!mesesDisponiveis.length){
+    selDe.innerHTML = '<option value="">--</option>';
+    selAte.innerHTML = '<option value="">--</option>';
+    selDe.disabled = true;
+    selAte.disabled = true;
+    periodoDe = null;
+    periodoAte = null;
+    return;
+  }
+
+  selDe.disabled = false;
+  selAte.disabled = false;
+  const optsHtml = mesesDisponiveis.map(m => `<option value="${m}">${fmtMes(m)}</option>`).join('');
+  selDe.innerHTML = optsHtml;
+  selAte.innerHTML = optsHtml;
+
+  periodoDe = mesesDisponiveis.includes(periodoDe) ? periodoDe : mesesDisponiveis[0];
+  periodoAte = mesesDisponiveis.includes(periodoAte) ? periodoAte : mesesDisponiveis[mesesDisponiveis.length - 1];
+  selDe.value = periodoDe;
+  selAte.value = periodoAte;
+}
+
+// Registros sem MES_CONCLUSAO (troca ainda sem data de conclusão) só
+// aparecem quando o período está no alcance total default -- assim que o
+// usuário restringe o período, eles saem (não têm como saber se caem
+// dentro do intervalo escolhido).
+function aplicarFiltroPeriodo(rows){
+  if (!mesesDisponiveis.length) return rows;
+  const periodoTotal = periodoDe === mesesDisponiveis[0] && periodoAte === mesesDisponiveis[mesesDisponiveis.length - 1];
+  return rows.filter(r => {
+    if (!r.MES_CONCLUSAO) return periodoTotal;
+    return r.MES_CONCLUSAO >= periodoDe && r.MES_CONCLUSAO <= periodoAte;
+  });
+}
+
+function aplicarFiltros(){
+  const porEmpresa = empresaSelecionada === '__todas__'
     ? FULL_DATA
     : FULL_DATA.filter(r => r.EMPRESA === empresaSelecionada);
+  DATA = aplicarFiltroPeriodo(porEmpresa);
 }
 
 function filterByPath(data, path){
@@ -792,7 +861,27 @@ function drawConnectors(connectors){
 document.getElementById('btnReload').addEventListener('click', () => carregarDados(true));
 document.getElementById('selEmpresa').addEventListener('change', (e) => {
   empresaSelecionada = e.target.value;
-  aplicarFiltroEmpresa();
+  aplicarFiltros();
+  reaplicarPathNoFiltro();
+  render();
+});
+document.getElementById('selPeriodoDe').addEventListener('change', (e) => {
+  periodoDe = e.target.value;
+  if (periodoDe > periodoAte){
+    periodoAte = periodoDe;
+    document.getElementById('selPeriodoAte').value = periodoAte;
+  }
+  aplicarFiltros();
+  reaplicarPathNoFiltro();
+  render();
+});
+document.getElementById('selPeriodoAte').addEventListener('change', (e) => {
+  periodoAte = e.target.value;
+  if (periodoAte < periodoDe){
+    periodoDe = periodoAte;
+    document.getElementById('selPeriodoDe').value = periodoDe;
+  }
+  aplicarFiltros();
   reaplicarPathNoFiltro();
   render();
 });
@@ -814,6 +903,8 @@ const TOUR_STEPS = [
     text: 'Aqui fica o valor total do Débito Associado. Parcelas e CNR já estão contidos nele não devem ser somados ao total.' },
   { selector: '#selEmpresa', title: 'Filtrar por empresa',
     text: 'Escolha uma empresa aqui pra recalcular os valores só dela. Se você já tiver decomposto a árvore, ela continua aberta só os números mudam.' },
+  { selector: '#selPeriodoDe', title: 'Filtrar por período',
+    text: 'Escolha o mês inicial e final aqui pra ver só as trocas concluídas nesse intervalo. Sem alterar, a árvore mostra todos os meses disponíveis.' },
   { selector: '.legend', title: 'O que cada cor significa',
     text: 'Laranja é o Débito Associado (a métrica principal da árvore), azul é Parcelas e dourado é CNR. As mesmas cores aparecem nas barrinhas de cada nó.' },
   { selector: '.col[data-col-index="0"] .node:first-child', title: 'Clique pra decompor',
