@@ -1,0 +1,5 @@
+# Cache de dados gerado em runtime pelo dados_arvore.php -- não deve ir
+# pro controle de versão: um snapshot velho aqui sobrescreve o cache real
+# do servidor a cada "git pull" e reseta o relógio de validade de 1h,
+# servindo dados desatualizados até expirar ou até clicar em "Recarregar".
+api/cache/
