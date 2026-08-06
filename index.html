@@ -636,11 +636,12 @@ function drawConnectors(connectors){
 
     const midX = (x1 + x2) / 2;
     const path = document.createElementNS('http://www.w3.org/2000/svg','path');
-    path.setAttribute('d', `M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2} ${y2}`);
+    path.setAttribute('d', `M ${x1} ${y1} L ${midX} ${y1} L ${midX} ${y2} L ${x2} ${y2}`);
     path.setAttribute('stroke', '#FF5A1F');
-    path.setAttribute('stroke-width', '2');
+    path.setAttribute('stroke-width', '1.5');
     path.setAttribute('fill', 'none');
-    path.setAttribute('opacity', '0.75');
+    path.setAttribute('stroke-linejoin', 'round');
+    path.setAttribute('opacity', '0.6');
     svg.appendChild(path);
   });
 }
