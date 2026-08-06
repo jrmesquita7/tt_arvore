@@ -12,6 +12,16 @@
 
 header('Content-Type: application/json; charset=utf-8');
 
+// Blinda a resposta: se o PHP emitir um warning/notice/deprecation durante a
+// consulta (ex.: o driver ODBC reclamar de algo depois de uma mudança na
+// tabela fonte), esse aviso normalmente é impresso como HTML
+// ("<br /><b>Warning</b>: ...") misturado à saída e quebra o JSON no front,
+// mesmo sem nenhuma coluna ter mudado de nome. Captura tudo que for
+// impresso incidentalmente e descarta (só loga), garantindo que o corpo da
+// resposta seja sempre exatamente o JSON esperado.
+ini_set('display_errors', '0');
+ob_start();
+
 // ----------------------------------------------------------------------------
 // Configuração da conexão -- mesmo padrão do seu arquivo existente
 // ----------------------------------------------------------------------------
@@ -121,7 +131,7 @@ try {
         $timestamp = $cache['timestamp'] ?? null;
     }
 
-    echo json_encode([
+    $resposta = json_encode([
         'geradoEm' => $timestamp,
         'linhas'   => count($dados),
         'dados'    => $dados,
@@ -129,5 +139,14 @@ try {
 
 } catch (Exception $e) {
     http_response_code(500);
-    echo json_encode(['error' => $e->getMessage()]);
+    $resposta = json_encode(['error' => $e->getMessage()]);
 }
+
+// Descarta (só loga) qualquer coisa que tenha sido impressa por fora do
+// json_encode acima -- é exatamente esse tipo de ruído que corrompia a
+// resposta. O log ajuda a investigar o que a mudança na tabela disparou.
+$saidaIncidental = trim(ob_get_clean());
+if ($saidaIncidental !== '') {
+    error_log('dados_arvore.php: saída inesperada suprimida da resposta: ' . $saidaIncidental);
+}
+echo $resposta;
