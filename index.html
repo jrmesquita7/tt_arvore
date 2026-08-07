@@ -262,7 +262,8 @@
   .tour-btn-solid{background:var(--eq-navy);border:1px solid var(--eq-navy);color:#fff;}
   .tour-btn-solid:hover{background:var(--eq-navy-3);}
 
-  .root-col,.col{min-width:188px;flex:0 0 188px;position:relative;}
+  .col{min-width:188px;flex:0 0 188px;position:relative;}
+  .root-col{min-width:236px;flex:0 0 236px;position:relative;}
   .col-head{display:flex;justify-content:space-between;align-items:center;padding-bottom:6px;margin-bottom:10px;border-bottom:2px solid var(--line-strong);}
   .col-head .name{font-weight:700;font-size:.7rem;color:var(--eq-navy);letter-spacing:.03em;text-transform:uppercase;}
   .col-head .count{font-size:.64rem;color:var(--ink-faint);font-variant-numeric:tabular-nums;}
@@ -314,23 +315,28 @@
   .empresa-card{
     background:var(--panel);border:1px solid var(--line);
     border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);
-    padding:14px 15px 10px;margin-top:12px;
+    padding:14px 14px 4px;margin-top:12px;
   }
   .empresa-card .label{
-    font-size:.64rem;color:var(--ink-faint);text-transform:uppercase;margin-bottom:8px;
+    font-size:.64rem;color:var(--ink-faint);text-transform:uppercase;margin-bottom:9px;
     letter-spacing:.05em;font-weight:700;
   }
-  .empresa-row{padding:8px 0;border-top:1px solid var(--line);}
-  .empresa-row:first-of-type{border-top:none;padding-top:0;}
-  .empresa-row-name{
-    font-weight:600;font-size:.74rem;color:var(--ink);margin-bottom:5px;
-    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  .empresa-table{width:100%;border-collapse:collapse;}
+  .empresa-table th{
+    font-size:.58rem;font-weight:700;color:var(--ink-faint);text-transform:uppercase;
+    letter-spacing:.02em;text-align:right;padding:0 0 6px;border-bottom:1px solid var(--line-strong);
+    white-space:nowrap;
   }
-  .empresa-row .headline-bar{height:4px;margin-bottom:6px;}
-  .empresa-row .metric-row{flex-direction:column;align-items:stretch;gap:2px;margin:4px 0;}
-  .empresa-row .metric-row .top-line{display:flex;align-items:center;justify-content:space-between;}
-  .empresa-row .metric-row .lblval{font-size:.6rem;color:var(--ink-soft);}
-  .empresa-row .metric-row .bar-track{height:4px;}
+  .empresa-table th:first-child{text-align:left;}
+  .empresa-table th .dot{width:5px;height:5px;border-radius:1px;display:inline-block;margin-right:3px;}
+  .empresa-table td{
+    font-size:.7rem;color:var(--ink);padding:6px 0;border-bottom:1px solid var(--line);
+    text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;
+  }
+  .empresa-table td:first-child{
+    text-align:left;font-weight:600;overflow:hidden;text-overflow:ellipsis;max-width:64px;
+  }
+  .empresa-table tr:last-child td{border-bottom:none;}
 
   .metric-row{display:flex;align-items:center;gap:7px;margin:5px 0;}
   .metric-row .dot{width:7px;height:7px;border-radius:2px;flex:0 0 7px;}
@@ -512,6 +518,16 @@ function fmtMes(aaaaMm){
 }
 
 function fmtBRL(v){ return "R$ " + (v||0).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+
+// Versão compacta (249,9K / 1,2M) pra caber em colunas estreitas de
+// tabela, tipo o comparativo por empresa.
+function fmtCompacto(v){
+  const n = v || 0;
+  const abs = Math.abs(n);
+  if (abs >= 1e6) return (n / 1e6).toLocaleString('pt-BR', {maximumFractionDigits:1}) + 'M';
+  if (abs >= 1e3) return (n / 1e3).toLocaleString('pt-BR', {maximumFractionDigits:1}) + 'K';
+  return n.toLocaleString('pt-BR', {maximumFractionDigits:0});
+}
 
 // Percentual do nó em relação ao total do pai. Com apenas 1 casa decimal,
 // um nó com valor pequeno mas real (ex.: 0,03%) e outro que fica bem perto
@@ -729,18 +745,19 @@ function empresaCompareCardHtml(subsetAtual){
       <div class="empty-hint">Nenhum dado para os filtros atuais.</div>
     </div>`;
   }
-  const maxVal = Math.max(...porEmpresa.map(n => n.agg[MEASURES[0].key]), 1);
-  const linhas = porEmpresa.map(item => {
-    const pctDoMax = maxVal > 0 ? Math.max(2, Math.min(100, (item.agg[MEASURES[0].key] / maxVal) * 100)) : 0;
-    return `<div class="empresa-row">
-      <div class="empresa-row-name">${item.label}</div>
-      <div class="headline-bar"><div class="headline-fill" style="width:${pctDoMax}%"></div></div>
-      ${MEASURES.map(m => metricRowNode(m, item.agg[m.key], maxVal)).join('')}
-    </div>`;
-  }).join('');
+  const linhas = porEmpresa.map(item => `<tr>
+    <td>${item.label}</td>
+    ${MEASURES.map(m => `<td>${fmtCompacto(item.agg[m.key])}</td>`).join('')}
+  </tr>`).join('');
   return `<div class="empresa-card">
     <div class="label">Comparativo por empresa</div>
-    ${linhas}
+    <table class="empresa-table">
+      <thead><tr>
+        <th>Empresa</th>
+        ${MEASURES.map(m => `<th><span class="dot" style="background:${m.color}"></span>${m.label}</th>`).join('')}
+      </tr></thead>
+      <tbody>${linhas}</tbody>
+    </table>
   </div>`;
 }
 
