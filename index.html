@@ -338,6 +338,18 @@
   }
   .empresa-table tr:last-child td{border-bottom:none;}
 
+  button.download-btn{
+    display:flex;align-items:center;justify-content:center;gap:7px;width:100%;
+    background:#fff;color:var(--eq-navy);border:1px solid var(--line-strong);
+    padding:9px 12px;font-size:.75rem;cursor:pointer;
+    border-radius:var(--radius-sm);font-weight:600;font-family:inherit;
+    margin-top:12px;
+    transition:border-color .15s var(--ease), color .15s var(--ease), background .15s var(--ease);
+  }
+  button.download-btn svg{width:14px;height:14px;flex:0 0 auto;}
+  button.download-btn:hover{border-color:var(--eq-blue);color:var(--eq-blue);background:#F3F9FE;}
+  button.download-btn:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(58,160,232,.22);}
+
   .metric-row{display:flex;align-items:center;gap:7px;margin:5px 0;}
   .metric-row .dot{width:7px;height:7px;border-radius:2px;flex:0 0 7px;}
   .metric-row .bar-track{flex:1;height:6px;background:var(--canvas-2);border-radius:4px;overflow:hidden;}
@@ -496,6 +508,14 @@
 <script>
 const API_URL = 'api/dados_arvore.php';
 const DIMENSIONS = ['FATURA_FINAL','ORIGEM_TROCA','VERIFICACAO','GRUPO_TARIFARIO','SEGMENTO','CLASSE_CONSUMO','STATUS_COMERCIAL'];
+// Rótulo amigável pro cabeçalho da coluna -- os dados continuam vindo do
+// nome de campo real (chave de DIMENSIONS), só a exibição muda.
+const DIMENSION_LABELS = {
+  STATUS_COMERCIAL: 'STATUS PRÉ TT',
+};
+function labelDim(dim){
+  return DIMENSION_LABELS[dim] || dim;
+}
 const MEASURES = [
   {key:'TOTAL_AB_CC_ANT',  label:'Débito',   color:'var(--m1)'},
   {key:'TOTAL_AB_PARCELAS',label:'Parcelas', color:'var(--m2)'},
@@ -761,6 +781,44 @@ function empresaCompareCardHtml(subsetAtual){
   </div>`;
 }
 
+// Baixa a base atual (já com os filtros de Empresa/Período aplicados,
+// mas sem restringir pela decomposição da árvore -- é a mesma base que
+// alimenta a árvore inteira) em CSV. Ponto e vírgula como separador e
+// vírgula decimal porque é o que o Excel em pt-BR espera; BOM UTF-8 na
+// frente pra acentuação não vir corrompida ao abrir.
+function celulaCsv(v){
+  if (v == null) return '';
+  if (typeof v === 'number'){
+    return v.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+  }
+  const s = String(v);
+  return /[;"\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+
+function gerarCsvBase(){
+  const colunas = ['EMPRESA', ...DIMENSIONS, 'MES_CONCLUSAO', ...MEASURES.map(m => m.key)];
+  const linhas = DATA.map(row => colunas.map(c => celulaCsv(row[c])).join(';'));
+  const BOM = '﻿';
+  return BOM + [colunas.join(';'), ...linhas].join('\r\n');
+}
+
+function baixarCsvBase(){
+  if (!DATA.length) return;
+  const csv = gerarCsvBase();
+  const blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const agora = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  const nomeArquivo = `arvore-troca-titularidade-${agora.getFullYear()}${pad(agora.getMonth()+1)}${pad(agora.getDate())}-${pad(agora.getHours())}${pad(agora.getMinutes())}.csv`;
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = nomeArquivo;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 function render(){
   const board = document.getElementById('board');
   board.innerHTML = '';
@@ -774,7 +832,11 @@ function render(){
       ${MEASURES.map(m => metricRowRoot(m, totalGeral[m.key], totalGeral[MEASURES[0].key])).join('')}
       <div class="root-note">Os valores de Parcelas e CNR já estão contidos no Débito acima — não devem ser somados a ele.</div>
     </div>
-    ${empresaCompareCardHtml(subsetAtual)}`;
+    ${empresaCompareCardHtml(subsetAtual)}
+    <button class="download-btn" id="btnDownloadCsv" type="button">
+      <svg viewBox="0 0 20 20" fill="none"><path d="M10 3v10m0 0-3.5-3.5M10 13l3.5-3.5M4 15.5h12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>Baixar base (CSV)</span>
+    </button>`;
   board.appendChild(rootCol);
 
   if (!DATA.length){
@@ -802,7 +864,7 @@ function render(){
       const lockedCol = document.createElement('div');
       lockedCol.className = 'col col-locked';
       lockedCol.dataset.colIndex = level;
-      lockedCol.innerHTML = `<div class="col-head col-head-locked"><span class="name">${dim}</span></div><div class="locked-hint">Selecione o nó anterior para ver as opções</div>`;
+      lockedCol.innerHTML = `<div class="col-head col-head-locked"><span class="name">${labelDim(dim)}</span></div><div class="locked-hint">Selecione o nó anterior para ver as opções</div>`;
       board.appendChild(lockedCol);
       continue;
     }
@@ -814,7 +876,7 @@ function render(){
     col.className = 'col';
     col.dataset.colIndex = level;
     col.style.animationDelay = (level * 0.03) + 's';
-    col.innerHTML = `<div class="col-head"><span class="name">${dim}</span><span class="count">${nodes.length}</span></div><div class="nodes"></div>`;
+    col.innerHTML = `<div class="col-head"><span class="name">${labelDim(dim)}</span><span class="count">${nodes.length}</span></div><div class="nodes"></div>`;
     const nodesWrap = col.querySelector('.nodes');
 
     const totalPaiObj = level === 0 ? totalGeral : aggregate(filterByPath(DATA, path.slice(0,level)));
@@ -832,7 +894,7 @@ function render(){
       el.tabIndex = 0;
       el.setAttribute('role', 'button');
       el.setAttribute('aria-pressed', isActive ? 'true' : 'false');
-      el.setAttribute('aria-label', `${dim}: ${node.label}, ${pct} do total`);
+      el.setAttribute('aria-label', `${labelDim(dim)}: ${node.label}, ${pct} do total`);
       const pctDoMax = maxVal > 0 ? Math.max(2, Math.min(100, (node.agg[MEASURES[0].key] / maxVal) * 100)) : 0;
       el.innerHTML = `
         <div class="lbl"><span>${node.label}</span><span class="pct">${pct}</span></div>
@@ -980,6 +1042,10 @@ document.getElementById('selPeriodoAte').addEventListener('change', (e) => {
   render();
 });
 window.addEventListener('resize', () => drawConnectors([]));
+// Delegado no document porque o botão é recriado a cada render().
+document.addEventListener('click', (e) => {
+  if (e.target.closest('#btnDownloadCsv')) baixarCsvBase();
+});
 
 const siteHeader = document.getElementById('siteHeader');
 document.addEventListener('scroll', () => {
@@ -997,6 +1063,8 @@ const TOUR_STEPS = [
     text: 'Aqui fica o valor total do Débito Associado. Parcelas e CNR já estão contidos nele não devem ser somados ao total.' },
   { selector: '.empresa-card', title: 'Comparativo por empresa',
     text: 'Débito, Parcelas e CNR agrupados por empresa, pra comparar entre elas. Esse card acompanha a decomposição: conforme você seleciona nós na árvore, os valores aqui são recalculados pro recorte atual.' },
+  { selector: '#btnDownloadCsv', title: 'Baixar a base em CSV',
+    text: 'Baixa a base completa (já com os filtros de Empresa e Período aplicados, mas sem restringir pela árvore) em CSV, pronta pra abrir no Excel.' },
   { selector: '#selEmpresa', title: 'Filtrar por empresa',
     text: 'Escolha uma empresa aqui pra recalcular os valores só dela. Se você já tiver decomposto a árvore, ela continua aberta só os números mudam.' },
   { selector: '#selPeriodoDe', title: 'Filtrar por período',
