@@ -1,0 +1,152 @@
+/* ==========================================================================
+   Estilo específico da página "Árvore de Troca de Titularidade": layout de
+   colunas/nós da árvore de decomposição, conectores, card raiz e
+   comparativo por empresa. Nada aqui é reaproveitado por outras páginas --
+   o que é genérico está em assets/css/base.css.
+   ========================================================================== */
+
+/* ---------- board / stage ---------- */
+.stage{position:relative;overflow-x:auto;padding:4px 4px 26px;scroll-behavior:smooth;}
+.stage::-webkit-scrollbar{height:10px;}
+.stage::-webkit-scrollbar-track{background:transparent;}
+.stage::-webkit-scrollbar-thumb{background:var(--line-strong);border-radius:20px;border:2px solid var(--canvas);}
+.stage::-webkit-scrollbar-thumb:hover{background:var(--ink-faint);}
+
+svg.connectors{position:absolute;top:0;left:0;pointer-events:none;overflow:visible;z-index:5;}
+.board{display:flex;gap:16px;align-items:flex-start;position:relative;z-index:1;transition:opacity .2s var(--ease), filter .2s var(--ease);}
+.board.is-refreshing{opacity:.45;filter:saturate(.65);pointer-events:none;}
+
+.col{min-width:188px;flex:0 0 188px;position:relative;}
+.root-col{min-width:236px;flex:0 0 236px;position:relative;}
+.col-head{display:flex;justify-content:space-between;align-items:center;padding-bottom:6px;margin-bottom:10px;border-bottom:2px solid var(--line-strong);}
+.col-head .name{font-weight:700;font-size:.7rem;color:var(--eq-navy);letter-spacing:.03em;text-transform:uppercase;}
+.col-head .count{font-size:.64rem;color:var(--ink-faint);font-variant-numeric:tabular-nums;}
+.root-block{padding-top:38px;}
+
+.col{animation:colIn .35s var(--ease) both;}
+@keyframes colIn{
+  from{opacity:0;}
+  to{opacity:1;}
+}
+
+.col.col-locked{opacity:.5;}
+.col-head.col-head-locked .name{color:var(--ink-faint);}
+.locked-hint{
+  border:1px dashed var(--line-strong);border-radius:var(--radius-sm);
+  padding:12px 10px;font-size:.63rem;line-height:1.4;color:var(--ink-faint);
+  text-align:center;background:rgba(255,255,255,.35);
+}
+
+/* ---------- root card ---------- */
+.root-card{
+  position:relative;overflow:hidden;
+  background:linear-gradient(155deg, var(--eq-navy-3) 0%, var(--eq-navy) 62%, var(--eq-navy-2) 100%);
+  color:#fff;padding:15px 15px 13px;border-radius:var(--radius-lg);
+  box-shadow:var(--shadow-lg);
+}
+.root-card::before{
+  content:'';position:absolute;inset:0;
+  background:
+    linear-gradient(90deg, var(--eq-orange), var(--eq-gold) 45%, var(--eq-blue));
+  height:4px;top:0;left:0;right:0;
+}
+.root-card::after{
+  content:'';position:absolute;width:220px;height:220px;border-radius:50%;
+  background:radial-gradient(circle, rgba(255,255,255,.08), transparent 70%);
+  top:-90px;right:-70px;pointer-events:none;
+}
+.root-card .label{
+  font-size:.64rem;color:#B9C6DE;text-transform:uppercase;margin-bottom:9px;
+  letter-spacing:.05em;font-weight:700;
+}
+
+.root-card .root-note{
+  margin-top:10px;padding-top:9px;border-top:1px solid rgba(255,255,255,.16);
+  font-size:.62rem;line-height:1.4;color:#B9C6DE;
+}
+
+/* ---------- comparativo por empresa (abaixo do card raiz) ---------- */
+.empresa-card{
+  background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);
+  padding:14px 14px 4px;margin-top:12px;
+}
+.empresa-card .label{
+  font-size:.64rem;color:var(--ink-faint);text-transform:uppercase;margin-bottom:9px;
+  letter-spacing:.05em;font-weight:700;
+}
+.empresa-table{width:100%;border-collapse:collapse;}
+.empresa-table th{
+  font-size:.58rem;font-weight:700;color:var(--ink-faint);text-transform:uppercase;
+  letter-spacing:.02em;text-align:right;padding:0 0 6px;border-bottom:1px solid var(--line-strong);
+  white-space:nowrap;
+}
+.empresa-table th:first-child{text-align:left;}
+.empresa-table th .dot{width:5px;height:5px;border-radius:1px;display:inline-block;margin-right:3px;}
+.empresa-table td{
+  font-size:.7rem;color:var(--ink);padding:6px 0;border-bottom:1px solid var(--line);
+  text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;
+}
+.empresa-table td:first-child{
+  text-align:left;font-weight:600;overflow:hidden;text-overflow:ellipsis;max-width:64px;
+}
+.empresa-table tr:last-child td{border-bottom:none;}
+
+.metric-row{display:flex;align-items:center;gap:7px;margin:5px 0;}
+.metric-row .dot{width:7px;height:7px;border-radius:2px;flex:0 0 7px;}
+.metric-row .bar-track{flex:1;height:6px;background:var(--canvas-2);border-radius:4px;overflow:hidden;}
+.root-card .bar-track{background:rgba(255,255,255,.14);}
+.metric-row .bar-fill{height:100%;border-radius:4px;transition:width .5s var(--ease);}
+.metric-row .lblval{font-variant-numeric:tabular-nums;font-size:.68rem;white-space:nowrap;flex:0 0 auto;}
+.metric-row .lblval .name{opacity:.72;margin-right:3px;}
+
+/* ---------- node cards ---------- */
+.node{
+  background:var(--panel);border:1px solid var(--line);
+  padding:7px 10px 8px;margin-bottom:6px;cursor:pointer;
+  border-radius:var(--radius-sm);position:relative;
+  box-shadow:var(--shadow-xs);
+  transition:border-color .15s var(--ease), box-shadow .18s var(--ease), transform .15s var(--ease), background .15s var(--ease);
+  animation:nodeIn .28s var(--ease) both;
+}
+.col .node:nth-child(1){animation-delay:.02s;}
+.col .node:nth-child(2){animation-delay:.05s;}
+.col .node:nth-child(3){animation-delay:.08s;}
+.col .node:nth-child(4){animation-delay:.11s;}
+.col .node:nth-child(5){animation-delay:.14s;}
+.col .node:nth-child(n+6){animation-delay:.16s;}
+@keyframes nodeIn{
+  from{opacity:0;}
+  to{opacity:1;}
+}
+
+.node:hover{border-color:var(--eq-orange);box-shadow:var(--shadow-md);transform:translateY(-2px);}
+.node:focus-visible{outline:none;border-color:var(--eq-orange);box-shadow:0 0 0 3px rgba(255,90,31,.18), var(--shadow-md);}
+.node.active{
+  border-color:var(--eq-orange);background:#FFF7F3;
+  box-shadow:var(--shadow-sm);
+}
+.node.active::before{
+  content:'';position:absolute;left:0;top:6px;bottom:6px;width:3px;
+  border-radius:3px;background:var(--eq-orange);
+}
+.node:active{transform:translateY(-1px) scale(.996);}
+
+.node .lbl{
+  font-weight:600;font-size:.76rem;margin-bottom:4px;display:flex;justify-content:space-between;
+  gap:6px;color:var(--ink);align-items:center;
+}
+.node .lbl > span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.node .lbl .pct{
+  font-weight:700;color:var(--eq-navy);font-size:.6rem;flex:0 0 auto;
+  background:var(--canvas-2);padding:1px 6px;border-radius:20px;font-variant-numeric:tabular-nums;
+}
+.node.active .lbl .pct{background:#FFE4D6;color:var(--eq-orange);}
+
+.headline-bar{height:4px;background:var(--canvas-2);border-radius:4px;overflow:hidden;margin-bottom:7px;}
+.headline-fill{height:100%;background:var(--eq-orange);border-radius:4px;transition:width .5s var(--ease);}
+
+.node .metric-row{flex-direction:column;align-items:stretch;gap:2px;margin:4px 0;}
+.node .metric-row .top-line{display:flex;align-items:center;justify-content:space-between;}
+.node .metric-row .lblval{font-size:.6rem;color:var(--ink-soft);}
+.node .metric-row .bar-track{height:4px;}

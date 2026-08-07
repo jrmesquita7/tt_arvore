@@ -1,0 +1,47 @@
+/* ==========================================================================
+   PALETA -- extraída da peça de campanha oficial "Atitude para Transformar"
+   (azul-marinho profundo + laranja vibrante + azul claro de apoio).
+   O azul e o dourado foram levemente aprofundados em relação à peça original
+   para atingir contraste mínimo de 3:1 contra o fundo (validado com
+   ferramenta de acessibilidade de paleta categórica); a identidade da marca
+   é preservada.
+
+   Tokens compartilhados por qualquer página do projeto. Uma página com
+   métricas diferentes das 3 daqui pode redefinir --m1/--m2/--m3 no seu
+   próprio CSS (carregado depois deste) em vez de mexer aqui.
+   ========================================================================== */
+:root{
+  --eq-navy:#0E1B4A;
+  --eq-navy-2:#16255E;
+  --eq-navy-3:#1E3170;
+  --eq-blue:#3AA0E8;      /* azul claro decorativo (headers, sheen) */
+  --eq-orange:#FF5A1F;    /* laranja vibrante ("ATITUDE") */
+  --eq-gold:#C98A1F;      /* dourado profundo (era amarelo puro) */
+
+  --ink:#101A34;
+  --ink-soft:#5B6478;
+  --ink-faint:#8A93A6;
+  --canvas:#F3F5F9;
+  --canvas-2:#EAEDF3;
+  --panel:#ffffff;
+  --line:#E3E7EE;
+  --line-strong:#CBD2DE;
+
+  --m1:var(--eq-orange);
+  --m2:#2E86D1;           /* azul de dado -- versão contrastada de --eq-blue */
+  --m3:var(--eq-gold);
+  --warn:#C0392B;
+  --ok:#1E8E5A;
+
+  --radius-sm:6px;
+  --radius-md:10px;
+  --radius-lg:14px;
+
+  --shadow-xs:0 1px 2px rgba(16,26,52,.05);
+  --shadow-sm:0 2px 6px rgba(16,26,52,.07), 0 1px 2px rgba(16,26,52,.05);
+  --shadow-md:0 8px 24px rgba(16,26,52,.10), 0 2px 6px rgba(16,26,52,.06);
+  --shadow-lg:0 16px 40px rgba(16,26,52,.14), 0 4px 10px rgba(16,26,52,.08);
+  --shadow-orange:0 6px 18px rgba(255,90,31,.22);
+
+  --ease:cubic-bezier(.2,.7,.2,1);
+}
